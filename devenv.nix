@@ -6,4 +6,5 @@
 }:
 {
   languages.go.enable = true;
+  packages = [ pkgs.gotestsum ];
 }

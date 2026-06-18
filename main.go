@@ -51,6 +51,8 @@ func main() {
 			recipe, err = ResolveShapedRecipe(d, tags)
 		case CraftingShapelessRecipeDTO:
 			recipe, err = ResolveShapelessRecipe(d, tags)
+		case SmeltingRecipeDTO:
+			recipe, err = ResolveSmeltingRecipe(d, tags)
 		}
 
 		if err != nil {
@@ -58,14 +60,16 @@ func main() {
 			continue
 		}
 		if recipe != nil {
+			// If multiple recipes produce the same result, we just keep the last one for now.
+			// Smelting often has blasting/smelting/campfire variants.
 			recipes[recipe.ResultID] = recipe
 		}
 	}
 
 	// 5. Calculate Tree
-	for _, target := range []string{"minecraft:lectern", "minecraft:book", "minecraft:brick_stairs"} {
+	for _, target := range []string{"minecraft:lectern", "minecraft:book", "minecraft:glass", "minecraft:hopper_minecart"} {
 		fmt.Printf("\nCalculating recipe for %s...\n", target)
-		root, err := CalculateRecipe(target, 1, recipes, tags)
+		root, err := CalculateRecipe(target, 80, recipes, tags, nil)
 		if err != nil {
 			fmt.Printf("Calculation error for %s: %v\n", target, err)
 			continue

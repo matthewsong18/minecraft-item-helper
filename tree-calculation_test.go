@@ -91,7 +91,7 @@ func TestCalculateRecipe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := main.CalculateRecipe(tt.targetID, tt.targetAmount, tt.recipes, tt.tags)
+			got, gotErr := main.CalculateRecipe(tt.targetID, tt.targetAmount, tt.recipes, tt.tags, nil)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("CalculateRecipe() failed: %v", gotErr)

@@ -6,7 +6,17 @@ import (
 	"slices"
 )
 
-func CalculateRecipe(targetID string, targetAmount int, recipes map[string]*Recipe, tags TagRegistry) (*Node, error) {
+func CalculateRecipe(targetID string, targetAmount int, recipes map[string]*Recipe, tags TagRegistry, path []string) (*Node, error) {
+	// 1. Check for cycles
+	if slices.Contains(path, targetID) {
+		// If we've already seen this item in the current recursion path,
+		// treat it as a base material to avoid infinite loops.
+		return &Node{
+			Item:         targetID,
+			TargetAmount: targetAmount,
+		}, nil
+	}
+
 	// base case: a recipe doesn't exist for the target, hence a leaf node
 	node := Node{
 		Item:             targetID,
@@ -23,8 +33,12 @@ func CalculateRecipe(targetID string, targetAmount int, recipes map[string]*Reci
 
 	node.Recipe = recipe
 
+	// Calculate how many times we need to run the recipe
 	recipeMultiplier := (targetAmount + recipe.Yield - 1) / recipe.Yield
 	node.RecipeMultiplier = recipeMultiplier
+
+	// Update the path for child calculations
+	newPath := append(path, targetID)
 
 	children := []Node{}
 	for _, ingredientAmount := range recipe.Ingredients {
@@ -44,7 +58,7 @@ func CalculateRecipe(targetID string, targetAmount int, recipes map[string]*Reci
 
 		itemAmountNeeded := ingredientAmount.Amount * recipeMultiplier
 
-		childNode, err := CalculateRecipe(itemID, itemAmountNeeded, recipes, tags)
+		childNode, err := CalculateRecipe(itemID, itemAmountNeeded, recipes, tags, newPath)
 		if err != nil {
 			return nil, err
 		}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -67,6 +68,41 @@ func ResolveShapelessRecipe(dto CraftingShapelessRecipeDTO, tags TagRegistry) (*
 		}
 		entry.Amount++
 		ingredients[id] = entry
+	}
+
+	newRecipe := Recipe{
+		ResultID:    dto.Result.ID,
+		Yield:       dto.Result.Count,
+		Ingredients: ingredients,
+	}
+
+	return &newRecipe, nil
+}
+
+func ResolveSmeltingRecipe(dto SmeltingRecipeDTO, tags TagRegistry) (*Recipe, error) {
+	var ingredientsStrings []string
+	if err := json.Unmarshal(dto.Ingredient, &ingredientsStrings); err != nil {
+		var single string
+		if err := json.Unmarshal(dto.Ingredient, &single); err != nil {
+			return nil, fmt.Errorf("failed to parse smelting ingredient: %v", err)
+		}
+		ingredientsStrings = append(ingredientsStrings, single)
+	}
+
+	ingredients := make(map[string]IngredientAmount)
+
+	if len(ingredientsStrings) == 0 {
+		return nil, fmt.Errorf("smelting recipe has no ingredients")
+	}
+
+	firstIngredient, err := resolveIngredient(ingredientsStrings[0], tags)
+	if err != nil {
+		return nil, err
+	}
+
+	ingredients[firstIngredient.getID()] = IngredientAmount{
+		Ingredient: firstIngredient,
+		Amount:     1,
 	}
 
 	newRecipe := Recipe{

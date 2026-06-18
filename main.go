@@ -23,15 +23,13 @@ func main() {
 	}
 
 	// 2. Parse Recipes
-	rawRecipes := make(map[string]CraftingShapedRecipeDTO)
 	recipeFiles, _ := filepath.Glob("assets/recipes/*.json")
+	recipeDTOs := make([]RecipeDTO, 0)
 	for _, path := range recipeFiles {
 		data, _ := os.ReadFile(path)
 
-		// For simplicity, we only handle shaped recipes for now
-		if recipeDTO, err := parseRecipeDTO(data); err == nil && recipeDTO.RecipeType() == "minecraft:crafting_shaped" {
-			shapedRecipeDTO := recipeDTO.(CraftingShapedRecipeDTO)
-			rawRecipes[shapedRecipeDTO.Result.ID] = shapedRecipeDTO
+		if dto, err := parseRecipeDTO(data); err == nil {
+			recipeDTOs = append(recipeDTOs, dto)
 		}
 	}
 
@@ -44,24 +42,36 @@ func main() {
 
 	// 4. Compile Recipes
 	recipes := make(map[string]*Recipe)
-	for id, dto := range rawRecipes {
-		recipe, err := ResolveShapedRecipe(dto, tags)
+	for _, dto := range recipeDTOs {
+		var recipe *Recipe
+		var err error
+
+		switch d := dto.(type) {
+		case CraftingShapedRecipeDTO:
+			recipe, err = ResolveShapedRecipe(d, tags)
+		case CraftingShapelessRecipeDTO:
+			recipe, err = ResolveShapelessRecipe(d, tags)
+		}
+
 		if err != nil {
-			fmt.Printf("Error compiling recipe for %s: %v\n", id, err)
+			fmt.Printf("Error compiling recipe: %v\n", err)
 			continue
 		}
-		recipes[id] = recipe
+		if recipe != nil {
+			recipes[recipe.ResultID] = recipe
+		}
 	}
 
-	// 5. Calculate Tree for a Barrel
-	fmt.Println("Calculating recipe for minecraft:lectern...")
-	root, err := CalculateRecipe("minecraft:lectern", 9, recipes, tags)
-	if err != nil {
-		fmt.Printf("Calculation error: %v\n", err)
-		return
+	// 5. Calculate Tree
+	for _, target := range []string{"minecraft:lectern", "minecraft:book", "minecraft:brick_stairs"} {
+		fmt.Printf("\nCalculating recipe for %s...\n", target)
+		root, err := CalculateRecipe(target, 1, recipes, tags)
+		if err != nil {
+			fmt.Printf("Calculation error for %s: %v\n", target, err)
+			continue
+		}
+		printNode(root, 0)
 	}
-
-	printNode(root, 0)
 }
 
 func printNode(n *Node, indent int) {

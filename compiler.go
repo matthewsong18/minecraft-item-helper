@@ -48,6 +48,36 @@ func ResolveShapedRecipe(dto CraftingShapedRecipeDTO, tags TagRegistry) (*Recipe
 	return &newRecipe, nil
 }
 
+func ResolveShapelessRecipe(dto CraftingShapelessRecipeDTO, tags TagRegistry) (*Recipe, error) {
+	ingredients := make(map[string]IngredientAmount)
+
+	for _, ingredientString := range dto.Ingredients {
+		newIngredient, err := resolveIngredient(ingredientString, tags)
+		if err != nil {
+			return nil, err
+		}
+
+		id := newIngredient.getID()
+		entry, exists := ingredients[id]
+		if !exists {
+			entry = IngredientAmount{
+				Ingredient: newIngredient,
+				Amount:     0,
+			}
+		}
+		entry.Amount++
+		ingredients[id] = entry
+	}
+
+	newRecipe := Recipe{
+		ResultID:    dto.Result.ID,
+		Yield:       dto.Result.Count,
+		Ingredients: ingredients,
+	}
+
+	return &newRecipe, nil
+}
+
 func resolveIngredient(ingredientString string, tags TagRegistry) (Ingredient, error) {
 	if tagID, ok := strings.CutPrefix(ingredientString, "#"); ok {
 		tag, exists := tags[tagID]

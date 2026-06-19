@@ -63,7 +63,6 @@ func (t *Tag) getItems() []string {
 }
 
 type CraftingState struct {
-	Inventory    map[string]int
 	Remainders   map[string]int
 	RawMaterials map[string]int
 }

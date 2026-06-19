@@ -57,7 +57,7 @@ type TagDTO struct {
 	Values []string `json:"values"`
 }
 
-func parseRecipeDTO(recipeData []byte) (RecipeDTO, error) {
+func ParseRecipeDTO(recipeData []byte) (RecipeDTO, error) {
 	var jsonResult struct {
 		RecipeType string `json:"type"`
 	}

@@ -88,7 +88,7 @@ func Test_parseRecipeDTO(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := parseRecipeDTO(tt.recipeData)
+			got, gotErr := ParseRecipeDTO(tt.recipeData)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("parseRecipeDTO() failed: %v", gotErr)

@@ -28,7 +28,7 @@ func main() {
 	for _, path := range recipeFiles {
 		data, _ := os.ReadFile(path)
 
-		if dto, err := parseRecipeDTO(data); err == nil {
+		if dto, err := ParseRecipeDTO(data); err == nil {
 			recipeDTOs = append(recipeDTOs, dto)
 		}
 	}
@@ -69,7 +69,7 @@ func main() {
 	// 5. Calculate Tree
 	for _, target := range []string{"minecraft:lectern", "minecraft:book", "minecraft:glass", "minecraft:hopper_minecart"} {
 		fmt.Printf("\nCalculating recipe for %s...\n", target)
-		root, err := CalculateRecipe(target, 80, recipes, tags, nil)
+		root, err := CalculateRecipeTree(target, 80, recipes, tags, nil)
 		if err != nil {
 			fmt.Printf("Calculation error for %s: %v\n", target, err)
 			continue

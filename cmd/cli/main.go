@@ -3,6 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"minecraft-item-helper/internal/adapters/secondary/jsonloader"
+	"minecraft-item-helper/internal/core/domain"
+	"minecraft-item-helper/internal/service"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,11 +13,11 @@ import (
 
 func main() {
 	// 1. Parse Tags
-	rawTags := make(map[string]TagDTO)
+	rawTags := make(map[string]jsonloader.TagDTO)
 	tagFiles, _ := filepath.Glob("assets/item-tag-groups/*.json")
 	for _, path := range tagFiles {
 		data, _ := os.ReadFile(path)
-		var dto TagDTO
+		var dto jsonloader.TagDTO
 		json.Unmarshal(data, &dto)
 
 		// Use the filename (minus .json) as the tag ID, prefixed with minecraft:
@@ -24,35 +27,35 @@ func main() {
 
 	// 2. Parse Recipes
 	recipeFiles, _ := filepath.Glob("assets/recipes/*.json")
-	recipeDTOs := make([]RecipeDTO, 0)
+	recipeDTOs := make([]jsonloader.RecipeDTO, 0)
 	for _, path := range recipeFiles {
 		data, _ := os.ReadFile(path)
 
-		if dto, err := ParseRecipeDTO(data); err == nil {
+		if dto, err := jsonloader.ParseRecipeDTO(data); err == nil {
 			recipeDTOs = append(recipeDTOs, dto)
 		}
 	}
 
 	// 3. Compile Tags
-	tags, err := ResolveTags(rawTags)
+	tags, err := jsonloader.ResolveTags(rawTags)
 	if err != nil {
 		fmt.Printf("Error compiling tags: %v\n", err)
 		return
 	}
 
 	// 4. Compile Recipes
-	recipes := make(map[string]*Recipe)
+	recipes := make(map[string]*domain.Recipe)
 	for _, dto := range recipeDTOs {
-		var recipe *Recipe
+		var recipe *domain.Recipe
 		var err error
 
 		switch d := dto.(type) {
-		case CraftingShapedRecipeDTO:
-			recipe, err = ResolveShapedRecipe(d, tags)
-		case CraftingShapelessRecipeDTO:
-			recipe, err = ResolveShapelessRecipe(d, tags)
-		case SmeltingRecipeDTO:
-			recipe, err = ResolveSmeltingRecipe(d, tags)
+		case jsonloader.CraftingShapedRecipeDTO:
+			recipe, err = jsonloader.ResolveShapedRecipe(d, tags)
+		case jsonloader.CraftingShapelessRecipeDTO:
+			recipe, err = jsonloader.ResolveShapelessRecipe(d, tags)
+		case jsonloader.SmeltingRecipeDTO:
+			recipe, err = jsonloader.ResolveSmeltingRecipe(d, tags)
 		}
 
 		if err != nil {
@@ -69,7 +72,7 @@ func main() {
 	// 5. Calculate Tree
 	for _, target := range []string{"minecraft:lectern", "minecraft:book", "minecraft:glass", "minecraft:hopper_minecart"} {
 		fmt.Printf("\nCalculating recipe for %s...\n", target)
-		root, err := CalculateRecipeTree(target, 80, recipes, tags, nil)
+		root, err := service.CalculateRecipeTree(target, 80, recipes, tags, nil)
 		if err != nil {
 			fmt.Printf("Calculation error for %s: %v\n", target, err)
 			continue
@@ -78,7 +81,7 @@ func main() {
 	}
 }
 
-func printNode(n *Node, indent int) {
+func printNode(n *domain.Node, indent int) {
 	fmt.Printf("%s%d x %s (Multiplier: %d)\n",
 		strings.Repeat("  ", indent),
 		n.TargetAmount,

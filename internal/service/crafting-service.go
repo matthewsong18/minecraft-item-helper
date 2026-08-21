@@ -1,8 +1,10 @@
-package main
+package service
 
 import (
 	"cmp"
 	"fmt"
+	"minecraft-item-helper/internal/adapters/secondary/jsonloader"
+	"minecraft-item-helper/internal/core/domain"
 	"slices"
 )
 
@@ -12,17 +14,17 @@ type ItemRequest struct {
 }
 
 type CraftingResult struct {
-	Trees         []*Node        `json:"trees"`
+	Trees         []*domain.Node `json:"trees"`
 	BaseMaterials map[string]int `json:"base_materials"`
 }
 
 type craftingService struct {
-	state   CraftingState
-	recipes map[string]*Recipe
-	tags    TagRegistry
+	state   domain.CraftingState
+	recipes map[string]*domain.Recipe
+	tags    jsonloader.TagRegistry
 }
 
-func NewCraftingService(recipes map[string]*Recipe, tags TagRegistry) *craftingService {
+func NewCraftingService(recipes map[string]*domain.Recipe, tags jsonloader.TagRegistry) *craftingService {
 	return &craftingService{
 		recipes: recipes,
 		tags:    tags,
@@ -31,7 +33,7 @@ func NewCraftingService(recipes map[string]*Recipe, tags TagRegistry) *craftingS
 
 func (s *craftingService) ComputeDependencies(itemRequests []*ItemRequest) (*CraftingResult, error) {
 	craftingResult := CraftingResult{
-		Trees:         []*Node{},
+		Trees:         []*domain.Node{},
 		BaseMaterials: map[string]int{},
 	}
 
@@ -45,7 +47,7 @@ func (s *craftingService) ComputeDependencies(itemRequests []*ItemRequest) (*Cra
 		}
 		craftingResult.Trees = append(craftingResult.Trees, itemTreeResult)
 
-		queue := []*Node{itemTreeResult}
+		queue := []*domain.Node{itemTreeResult}
 		for len(queue) > 0 {
 			node := queue[0]
 			queue = queue[1:]
@@ -67,7 +69,7 @@ func (s *craftingService) ComputeDependencies(itemRequests []*ItemRequest) (*Cra
 	return &craftingResult, nil
 }
 
-func CalculateRecipeTree(targetID string, targetAmount int, recipes map[string]*Recipe, tags TagRegistry, path []string) (*Node, error) {
+func CalculateRecipeTree(targetID string, targetAmount int, recipes map[string]*domain.Recipe, tags jsonloader.TagRegistry, path []string) (*domain.Node, error) {
 	// Check for cycles
 	if slices.Contains(path, targetID) {
 		// If we've already seen this item in the current recursion path,
@@ -76,7 +78,7 @@ func CalculateRecipeTree(targetID string, targetAmount int, recipes map[string]*
 	}
 
 	// base case: a recipe doesn't exist for the target, hence a leaf node
-	node := Node{
+	node := domain.Node{
 		Item:             targetID,
 		Recipe:           nil,
 		TargetAmount:     targetAmount,
@@ -98,14 +100,14 @@ func CalculateRecipeTree(targetID string, targetAmount int, recipes map[string]*
 	// Update the path for child calculations
 	newPath := append(path, targetID)
 
-	children := []Node{}
+	children := []domain.Node{}
 	for _, ingredientAmount := range recipe.Ingredients {
 		var itemID string
 		switch ing := ingredientAmount.Ingredient.(type) {
-		case Item:
+		case domain.Item:
 			itemID = ing.ID
-		case *Tag:
-			items := ing.getItems()
+		case *domain.Tag:
+			items := ing.GetItems()
 			if len(items) == 0 {
 				return nil, fmt.Errorf("tag %s has no items", ing.ID)
 			}
@@ -125,7 +127,7 @@ func CalculateRecipeTree(targetID string, targetAmount int, recipes map[string]*
 		}
 	}
 
-	slices.SortFunc(children, func(a, b Node) int {
+	slices.SortFunc(children, func(a, b domain.Node) int {
 		return cmp.Compare(a.Item, b.Item)
 	})
 	node.Children = children

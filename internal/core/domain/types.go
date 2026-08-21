@@ -1,4 +1,4 @@
-package main
+package domain
 
 type Recipe struct {
 	ResultID    string
@@ -12,14 +12,14 @@ type IngredientAmount struct {
 }
 
 type Ingredient interface {
-	getID() string
+	GetID() string
 	Matches(itemID string) bool
-	getItems() []string
+	GetItems() []string
 }
 
 type Item struct{ ID string }
 
-func (i Item) getID() string {
+func (i Item) GetID() string {
 	return i.ID
 }
 
@@ -28,8 +28,8 @@ func (i Item) Matches(itemID string) bool {
 	return i.ID == itemID
 }
 
-// getItems implements [Ingredient].
-func (i Item) getItems() []string {
+// GetItems implements [Ingredient].
+func (i Item) GetItems() []string {
 	return []string{i.ID}
 }
 
@@ -39,7 +39,7 @@ type Tag struct {
 }
 
 // getID implements [Ingredient].
-func (t *Tag) getID() string {
+func (t *Tag) GetID() string {
 	return t.ID
 }
 
@@ -53,11 +53,11 @@ func (t *Tag) Matches(itemID string) bool {
 	return false
 }
 
-// getItems implements [Ingredient].
-func (t *Tag) getItems() []string {
+// GetItems implements [Ingredient].
+func (t *Tag) GetItems() []string {
 	var items []string
 	for _, child := range t.Items {
-		items = append(items, child.getItems()...)
+		items = append(items, child.GetItems()...)
 	}
 	return items
 }

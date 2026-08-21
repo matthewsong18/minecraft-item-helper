@@ -1,4 +1,4 @@
-package main
+package jsonloader
 
 import (
 	"encoding/json"
@@ -90,7 +90,7 @@ func ParseRecipeDTO(recipeData []byte) (RecipeDTO, error) {
 	}
 }
 
-func parseTagDTO(tagData []byte) (*TagDTO, error) {
+func ParseTagDTO(tagData []byte) (*TagDTO, error) {
 	var tagDTO TagDTO
 	if err := json.Unmarshal(tagData, &tagDTO); err != nil {
 		return nil, err

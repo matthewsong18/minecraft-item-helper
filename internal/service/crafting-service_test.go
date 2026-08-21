@@ -1,9 +1,11 @@
-package main_test
+package service_test
 
 import (
 	"encoding/json"
 	"fmt"
-	main "minecraft-item-helper"
+	"minecraft-item-helper/internal/adapters/secondary/jsonloader"
+	"minecraft-item-helper/internal/core/domain"
+	"minecraft-item-helper/internal/service"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,13 +14,13 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func setup() (map[string]*main.Recipe, main.TagRegistry) {
+func setup() (map[string]*domain.Recipe, jsonloader.TagRegistry) {
 	// 1. Parse Tags
-	rawTags := make(map[string]main.TagDTO)
+	rawTags := make(map[string]jsonloader.TagDTO)
 	tagFiles, _ := filepath.Glob("assets/item-tag-groups/*.json")
 	for _, path := range tagFiles {
 		data, _ := os.ReadFile(path)
-		var dto main.TagDTO
+		var dto jsonloader.TagDTO
 		json.Unmarshal(data, &dto)
 
 		// Use the filename (minus .json) as the tag ID, prefixed with minecraft:
@@ -28,35 +30,35 @@ func setup() (map[string]*main.Recipe, main.TagRegistry) {
 
 	// 2. Parse Recipes
 	recipeFiles, _ := filepath.Glob("assets/recipes/*.json")
-	recipeDTOs := make([]main.RecipeDTO, 0)
+	recipeDTOs := make([]jsonloader.RecipeDTO, 0)
 	for _, path := range recipeFiles {
 		data, _ := os.ReadFile(path)
 
-		if dto, err := main.ParseRecipeDTO(data); err == nil {
+		if dto, err := jsonloader.ParseRecipeDTO(data); err == nil {
 			recipeDTOs = append(recipeDTOs, dto)
 		}
 	}
 
 	// 3. Compile Tags
-	tags, err := main.ResolveTags(rawTags)
+	tags, err := jsonloader.ResolveTags(rawTags)
 	if err != nil {
 		fmt.Printf("Error compiling tags: %v\n", err)
 		return nil, nil
 	}
 
 	// 4. Compile Recipes
-	recipes := make(map[string]*main.Recipe)
+	recipes := make(map[string]*domain.Recipe)
 	for _, dto := range recipeDTOs {
-		var recipe *main.Recipe
+		var recipe *domain.Recipe
 		var err error
 
 		switch d := dto.(type) {
-		case main.CraftingShapedRecipeDTO:
-			recipe, err = main.ResolveShapedRecipe(d, tags)
-		case main.CraftingShapelessRecipeDTO:
-			recipe, err = main.ResolveShapelessRecipe(d, tags)
-		case main.SmeltingRecipeDTO:
-			recipe, err = main.ResolveSmeltingRecipe(d, tags)
+		case jsonloader.CraftingShapedRecipeDTO:
+			recipe, err = jsonloader.ResolveShapedRecipe(d, tags)
+		case jsonloader.CraftingShapelessRecipeDTO:
+			recipe, err = jsonloader.ResolveShapelessRecipe(d, tags)
+		case jsonloader.SmeltingRecipeDTO:
+			recipe, err = jsonloader.ResolveSmeltingRecipe(d, tags)
 		}
 
 		if err != nil {
@@ -79,68 +81,68 @@ func TestCalculateRecipe(t *testing.T) {
 		// Named input parameters for target function.
 		targetID     string
 		targetAmount int
-		recipes      map[string]*main.Recipe
-		tags         main.TagRegistry
-		want         *main.Node
+		recipes      map[string]*domain.Recipe
+		tags         jsonloader.TagRegistry
+		want         *domain.Node
 		wantErr      bool
 	}{
 		{
 			name:         "simple tree",
 			targetID:     "minecraft:oak_boat",
 			targetAmount: 1,
-			recipes: map[string]*main.Recipe{
-				"minecraft:oak_boat": &main.Recipe{
+			recipes: map[string]*domain.Recipe{
+				"minecraft:oak_boat": &domain.Recipe{
 					ResultID: "minecraft:oak_boat",
 					Yield:    1,
-					Ingredients: map[string]main.IngredientAmount{
-						"minecraft:oak_planks": main.IngredientAmount{
-							Ingredient: main.Item{ID: "minecraft:oak_planks"},
+					Ingredients: map[string]domain.IngredientAmount{
+						"minecraft:oak_planks": domain.IngredientAmount{
+							Ingredient: domain.Item{ID: "minecraft:oak_planks"},
 							Amount:     5,
 						},
 					},
 				},
-				"minecraft:oak_planks": &main.Recipe{
+				"minecraft:oak_planks": &domain.Recipe{
 					ResultID: "minecraft:oak_planks",
 					Yield:    4,
-					Ingredients: map[string]main.IngredientAmount{
-						"minecraft:oak_logs": main.IngredientAmount{
-							Ingredient: main.Item{ID: "minecraft:oak_logs"},
+					Ingredients: map[string]domain.IngredientAmount{
+						"minecraft:oak_logs": domain.IngredientAmount{
+							Ingredient: domain.Item{ID: "minecraft:oak_logs"},
 							Amount:     1,
 						},
 					},
 				},
 			},
-			tags: main.TagRegistry{},
-			want: &main.Node{
+			tags: jsonloader.TagRegistry{},
+			want: &domain.Node{
 				Item: "minecraft:oak_boat",
-				Recipe: &main.Recipe{
+				Recipe: &domain.Recipe{
 					ResultID: "minecraft:oak_boat",
 					Yield:    1,
-					Ingredients: map[string]main.IngredientAmount{
-						"minecraft:oak_planks": main.IngredientAmount{
-							Ingredient: main.Item{ID: "minecraft:oak_planks"},
+					Ingredients: map[string]domain.IngredientAmount{
+						"minecraft:oak_planks": domain.IngredientAmount{
+							Ingredient: domain.Item{ID: "minecraft:oak_planks"},
 							Amount:     5,
 						},
 					},
 				},
 				TargetAmount:     1,
 				RecipeMultiplier: 1,
-				Children: []main.Node{
+				Children: []domain.Node{
 					{
 						Item: "minecraft:oak_planks",
-						Recipe: &main.Recipe{
+						Recipe: &domain.Recipe{
 							ResultID: "minecraft:oak_planks",
 							Yield:    4,
-							Ingredients: map[string]main.IngredientAmount{
-								"minecraft:oak_logs": main.IngredientAmount{
-									Ingredient: main.Item{ID: "minecraft:oak_logs"},
+							Ingredients: map[string]domain.IngredientAmount{
+								"minecraft:oak_logs": domain.IngredientAmount{
+									Ingredient: domain.Item{ID: "minecraft:oak_logs"},
 									Amount:     1,
 								},
 							},
 						},
 						TargetAmount:     5,
 						RecipeMultiplier: 2,
-						Children: []main.Node{
+						Children: []domain.Node{
 							{
 								Item:             "minecraft:oak_logs",
 								Recipe:           nil,
@@ -157,7 +159,7 @@ func TestCalculateRecipe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := main.CalculateRecipeTree(tt.targetID, tt.targetAmount, tt.recipes, tt.tags, nil)
+			got, gotErr := service.CalculateRecipeTree(tt.targetID, tt.targetAmount, tt.recipes, tt.tags, nil)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("CalculateRecipe() failed: %v", gotErr)
@@ -180,18 +182,18 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for receiver constructor.
-		recipes map[string]*main.Recipe
-		tags    main.TagRegistry
+		recipes map[string]*domain.Recipe
+		tags    jsonloader.TagRegistry
 		// Named input parameters for target function.
-		itemRequests []*main.ItemRequest
-		want         *main.CraftingResult
+		itemRequests []*service.ItemRequest
+		want         *service.CraftingResult
 		wantErr      bool
 	}{
 		{
 			name:    "simple test",
 			recipes: recipes,
 			tags:    tags,
-			itemRequests: []*main.ItemRequest{
+			itemRequests: []*service.ItemRequest{
 				{
 					ItemID: "minecraft:lectern",
 					Amount: 1,
@@ -201,34 +203,34 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 					Amount: 1,
 				},
 			},
-			want: &main.CraftingResult{
-				Trees: []*main.Node{
-					&main.Node{
+			want: &service.CraftingResult{
+				Trees: []*domain.Node{
+					&domain.Node{
 						Item: "minecraft:lectern",
-						Recipe: &main.Recipe{
+						Recipe: &domain.Recipe{
 							ResultID: "minecraft:lectern",
 							Yield:    1,
-							Ingredients: map[string]main.IngredientAmount{
+							Ingredients: map[string]domain.IngredientAmount{
 								"minecraft:bookshelf": {
-									Ingredient: main.Item{ID: "minecraft:bookshelf"},
+									Ingredient: domain.Item{ID: "minecraft:bookshelf"},
 									Amount:     1,
 								},
 								"minecraft:wooden_slabs": {
-									Ingredient: &main.Tag{
+									Ingredient: &domain.Tag{
 										ID: "minecraft:wooden_slabs",
-										Items: []main.Ingredient{
-											main.Item{ID: "minecraft:oak_slab"},
-											main.Item{ID: "minecraft:spruce_slab"},
-											main.Item{ID: "minecraft:birch_slab"},
-											main.Item{ID: "minecraft:jungle_slab"},
-											main.Item{ID: "minecraft:acacia_slab"},
-											main.Item{ID: "minecraft:dark_oak_slab"},
-											main.Item{ID: "minecraft:pale_oak_slab"},
-											main.Item{ID: "minecraft:crimson_slab"},
-											main.Item{ID: "minecraft:warped_slab"},
-											main.Item{ID: "minecraft:mangrove_slab"},
-											main.Item{ID: "minecraft:bamboo_slab"},
-											main.Item{ID: "minecraft:cherry_slab"},
+										Items: []domain.Ingredient{
+											domain.Item{ID: "minecraft:oak_slab"},
+											domain.Item{ID: "minecraft:spruce_slab"},
+											domain.Item{ID: "minecraft:birch_slab"},
+											domain.Item{ID: "minecraft:jungle_slab"},
+											domain.Item{ID: "minecraft:acacia_slab"},
+											domain.Item{ID: "minecraft:dark_oak_slab"},
+											domain.Item{ID: "minecraft:pale_oak_slab"},
+											domain.Item{ID: "minecraft:crimson_slab"},
+											domain.Item{ID: "minecraft:warped_slab"},
+											domain.Item{ID: "minecraft:mangrove_slab"},
+											domain.Item{ID: "minecraft:bamboo_slab"},
+											domain.Item{ID: "minecraft:cherry_slab"},
 										},
 									},
 									Amount: 4,
@@ -237,30 +239,30 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 						},
 						TargetAmount:     1,
 						RecipeMultiplier: 1,
-						Children: []main.Node{
+						Children: []domain.Node{
 							{
 								Item: "minecraft:bookshelf",
-								Recipe: &main.Recipe{
+								Recipe: &domain.Recipe{
 									ResultID: "minecraft:bookshelf",
 									Yield:    1,
-									Ingredients: map[string]main.IngredientAmount{
-										"minecraft:book": {Ingredient: main.Item{ID: "minecraft:book"}, Amount: 3},
+									Ingredients: map[string]domain.IngredientAmount{
+										"minecraft:book": {Ingredient: domain.Item{ID: "minecraft:book"}, Amount: 3},
 										"minecraft:planks": {
-											Ingredient: &main.Tag{
+											Ingredient: &domain.Tag{
 												ID: "minecraft:planks",
-												Items: []main.Ingredient{
-													main.Item{ID: "minecraft:oak_planks"},
-													main.Item{ID: "minecraft:spruce_planks"},
-													main.Item{ID: "minecraft:birch_planks"},
-													main.Item{ID: "minecraft:jungle_planks"},
-													main.Item{ID: "minecraft:acacia_planks"},
-													main.Item{ID: "minecraft:dark_oak_planks"},
-													main.Item{ID: "minecraft:pale_oak_planks"},
-													main.Item{ID: "minecraft:crimson_planks"},
-													main.Item{ID: "minecraft:warped_planks"},
-													main.Item{ID: "minecraft:mangrove_planks"},
-													main.Item{ID: "minecraft:bamboo_planks"},
-													main.Item{ID: "minecraft:cherry_planks"},
+												Items: []domain.Ingredient{
+													domain.Item{ID: "minecraft:oak_planks"},
+													domain.Item{ID: "minecraft:spruce_planks"},
+													domain.Item{ID: "minecraft:birch_planks"},
+													domain.Item{ID: "minecraft:jungle_planks"},
+													domain.Item{ID: "minecraft:acacia_planks"},
+													domain.Item{ID: "minecraft:dark_oak_planks"},
+													domain.Item{ID: "minecraft:pale_oak_planks"},
+													domain.Item{ID: "minecraft:crimson_planks"},
+													domain.Item{ID: "minecraft:warped_planks"},
+													domain.Item{ID: "minecraft:mangrove_planks"},
+													domain.Item{ID: "minecraft:bamboo_planks"},
+													domain.Item{ID: "minecraft:cherry_planks"},
 												},
 											},
 											Amount: 6,
@@ -269,41 +271,41 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 								},
 								TargetAmount:     1,
 								RecipeMultiplier: 1,
-								Children: []main.Node{
+								Children: []domain.Node{
 									{
 										Item: "minecraft:book",
-										Recipe: &main.Recipe{
+										Recipe: &domain.Recipe{
 											ResultID: "minecraft:book",
 											Yield:    1,
-											Ingredients: map[string]main.IngredientAmount{
+											Ingredients: map[string]domain.IngredientAmount{
 												"minecraft:leather": {
-													Ingredient: main.Item{ID: "minecraft:leather"},
+													Ingredient: domain.Item{ID: "minecraft:leather"},
 													Amount:     1,
 												},
 												"minecraft:paper": {
-													Ingredient: main.Item{ID: "minecraft:paper"},
+													Ingredient: domain.Item{ID: "minecraft:paper"},
 													Amount:     3,
 												},
 											},
 										},
 										TargetAmount:     3,
 										RecipeMultiplier: 3,
-										Children: []main.Node{
+										Children: []domain.Node{
 											{
 												Item: "minecraft:leather",
-												Recipe: &main.Recipe{
+												Recipe: &domain.Recipe{
 													ResultID: "minecraft:leather",
 													Yield:    1,
-													Ingredients: map[string]main.IngredientAmount{
+													Ingredients: map[string]domain.IngredientAmount{
 														"minecraft:rabbit_hide": {
-															Ingredient: main.Item{ID: "minecraft:rabbit_hide"},
+															Ingredient: domain.Item{ID: "minecraft:rabbit_hide"},
 															Amount:     4,
 														},
 													},
 												},
 												TargetAmount:     3,
 												RecipeMultiplier: 3,
-												Children: []main.Node{
+												Children: []domain.Node{
 													{
 														Item:             "minecraft:rabbit_hide",
 														Recipe:           nil,
@@ -315,19 +317,19 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 											},
 											{
 												Item: "minecraft:paper",
-												Recipe: &main.Recipe{
+												Recipe: &domain.Recipe{
 													ResultID: "minecraft:paper",
 													Yield:    3,
-													Ingredients: map[string]main.IngredientAmount{
+													Ingredients: map[string]domain.IngredientAmount{
 														"minecraft:sugar_cane": {
-															Ingredient: main.Item{ID: "minecraft:sugar_cane"},
+															Ingredient: domain.Item{ID: "minecraft:sugar_cane"},
 															Amount:     3,
 														},
 													},
 												},
 												TargetAmount:     9,
 												RecipeMultiplier: 3,
-												Children: []main.Node{
+												Children: []domain.Node{
 													{
 														Item:             "minecraft:sugar_cane",
 														Recipe:           nil,
@@ -341,18 +343,18 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 									},
 									{
 										Item: "minecraft:oak_planks",
-										Recipe: &main.Recipe{
+										Recipe: &domain.Recipe{
 											ResultID: "minecraft:oak_planks",
 											Yield:    4,
-											Ingredients: map[string]main.IngredientAmount{
+											Ingredients: map[string]domain.IngredientAmount{
 												"minecraft:oak_logs": {
-													Ingredient: &main.Tag{
+													Ingredient: &domain.Tag{
 														ID: "minecraft:oak_logs",
-														Items: []main.Ingredient{
-															main.Item{ID: "minecraft:oak_log"},
-															main.Item{ID: "minecraft:oak_wood"},
-															main.Item{ID: "minecraft:stripped_oak_log"},
-															main.Item{ID: "minecraft:stripped_oak_wood"},
+														Items: []domain.Ingredient{
+															domain.Item{ID: "minecraft:oak_log"},
+															domain.Item{ID: "minecraft:oak_wood"},
+															domain.Item{ID: "minecraft:stripped_oak_log"},
+															domain.Item{ID: "minecraft:stripped_oak_wood"},
 														},
 													},
 													Amount: 1,
@@ -361,7 +363,7 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 										},
 										TargetAmount:     6,
 										RecipeMultiplier: 2,
-										Children: []main.Node{
+										Children: []domain.Node{
 											{
 												Item:             "minecraft:oak_log",
 												Recipe:           nil,
@@ -375,33 +377,33 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 							},
 							{
 								Item: "minecraft:oak_slab",
-								Recipe: &main.Recipe{
+								Recipe: &domain.Recipe{
 									ResultID: "minecraft:oak_slab",
 									Yield:    6,
-									Ingredients: map[string]main.IngredientAmount{
+									Ingredients: map[string]domain.IngredientAmount{
 										"minecraft:oak_planks": {
-											Ingredient: main.Item{ID: "minecraft:oak_planks"},
+											Ingredient: domain.Item{ID: "minecraft:oak_planks"},
 											Amount:     3,
 										},
 									},
 								},
 								TargetAmount:     4,
 								RecipeMultiplier: 1,
-								Children: []main.Node{
+								Children: []domain.Node{
 									{
 										Item: "minecraft:oak_planks",
-										Recipe: &main.Recipe{
+										Recipe: &domain.Recipe{
 											ResultID: "minecraft:oak_planks",
 											Yield:    4,
-											Ingredients: map[string]main.IngredientAmount{
+											Ingredients: map[string]domain.IngredientAmount{
 												"minecraft:oak_logs": {
-													Ingredient: &main.Tag{
+													Ingredient: &domain.Tag{
 														ID: "minecraft:oak_logs",
-														Items: []main.Ingredient{
-															main.Item{ID: "minecraft:oak_log"},
-															main.Item{ID: "minecraft:oak_wood"},
-															main.Item{ID: "minecraft:stripped_oak_log"},
-															main.Item{ID: "minecraft:stripped_oak_wood"},
+														Items: []domain.Ingredient{
+															domain.Item{ID: "minecraft:oak_log"},
+															domain.Item{ID: "minecraft:oak_wood"},
+															domain.Item{ID: "minecraft:stripped_oak_log"},
+															domain.Item{ID: "minecraft:stripped_oak_wood"},
 														},
 													},
 													Amount: 1,
@@ -410,7 +412,7 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 										},
 										TargetAmount:     3,
 										RecipeMultiplier: 1,
-										Children: []main.Node{
+										Children: []domain.Node{
 											{
 												Item:             "minecraft:oak_log",
 												Recipe:           nil,
@@ -424,40 +426,40 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 							},
 						},
 					},
-					&main.Node{
+					&domain.Node{
 						Item: "minecraft:book",
-						Recipe: &main.Recipe{
+						Recipe: &domain.Recipe{
 							ResultID: "minecraft:book",
 							Yield:    1,
-							Ingredients: map[string]main.IngredientAmount{
+							Ingredients: map[string]domain.IngredientAmount{
 								"minecraft:leather": {
-									Ingredient: main.Item{ID: "minecraft:leather"},
+									Ingredient: domain.Item{ID: "minecraft:leather"},
 									Amount:     1,
 								},
 								"minecraft:paper": {
-									Ingredient: main.Item{ID: "minecraft:paper"},
+									Ingredient: domain.Item{ID: "minecraft:paper"},
 									Amount:     3,
 								},
 							},
 						},
 						TargetAmount:     1,
 						RecipeMultiplier: 1,
-						Children: []main.Node{
+						Children: []domain.Node{
 							{
 								Item: "minecraft:leather",
-								Recipe: &main.Recipe{
+								Recipe: &domain.Recipe{
 									ResultID: "minecraft:leather",
 									Yield:    1,
-									Ingredients: map[string]main.IngredientAmount{
+									Ingredients: map[string]domain.IngredientAmount{
 										"minecraft:rabbit_hide": {
-											Ingredient: main.Item{ID: "minecraft:rabbit_hide"},
+											Ingredient: domain.Item{ID: "minecraft:rabbit_hide"},
 											Amount:     4,
 										},
 									},
 								},
 								TargetAmount:     1,
 								RecipeMultiplier: 1,
-								Children: []main.Node{
+								Children: []domain.Node{
 									{
 										Item:             "minecraft:rabbit_hide",
 										Recipe:           nil,
@@ -469,19 +471,19 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 							},
 							{
 								Item: "minecraft:paper",
-								Recipe: &main.Recipe{
+								Recipe: &domain.Recipe{
 									ResultID: "minecraft:paper",
 									Yield:    3,
-									Ingredients: map[string]main.IngredientAmount{
+									Ingredients: map[string]domain.IngredientAmount{
 										"minecraft:sugar_cane": {
-											Ingredient: main.Item{ID: "minecraft:sugar_cane"},
+											Ingredient: domain.Item{ID: "minecraft:sugar_cane"},
 											Amount:     3,
 										},
 									},
 								},
 								TargetAmount:     3,
 								RecipeMultiplier: 1,
-								Children: []main.Node{
+								Children: []domain.Node{
 									{
 										Item:             "minecraft:sugar_cane",
 										Recipe:           nil,
@@ -505,7 +507,7 @@ func TestCraftingService_ComputeDependencies(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := main.NewCraftingService(tt.recipes, tt.tags)
+			s := service.NewCraftingService(tt.recipes, tt.tags)
 			got, gotErr := s.ComputeDependencies(tt.itemRequests)
 			if gotErr != nil {
 				if !tt.wantErr {

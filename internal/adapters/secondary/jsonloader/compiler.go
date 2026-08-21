@@ -1,15 +1,16 @@
-package main
+package jsonloader
 
 import (
 	"encoding/json"
 	"fmt"
+	"minecraft-item-helper/internal/core/domain"
 	"strings"
 )
 
-type TagRegistry map[string]Ingredient
+type TagRegistry map[string]domain.Ingredient
 
-func ResolveShapedRecipe(dto CraftingShapedRecipeDTO, tags TagRegistry) (*Recipe, error) {
-	ingredients := make(map[string]IngredientAmount)
+func ResolveShapedRecipe(dto CraftingShapedRecipeDTO, tags TagRegistry) (*domain.Recipe, error) {
+	ingredients := make(map[string]domain.IngredientAmount)
 
 	for key, ingredientString := range dto.Key {
 		var amount int
@@ -25,14 +26,14 @@ func ResolveShapedRecipe(dto CraftingShapedRecipeDTO, tags TagRegistry) (*Recipe
 			return nil, err
 		}
 
-		newIngredientID := newIngredient.getID()
+		newIngredientID := newIngredient.GetID()
 
 		if ingredientAmount, exists := ingredients[newIngredientID]; exists {
 			ingredientAmount.Amount += amount
 			continue
 		}
 
-		newIngredientAmountEntry := IngredientAmount{
+		newIngredientAmountEntry := domain.IngredientAmount{
 			Ingredient: newIngredient,
 			Amount:     amount,
 		}
@@ -40,7 +41,7 @@ func ResolveShapedRecipe(dto CraftingShapedRecipeDTO, tags TagRegistry) (*Recipe
 		ingredients[newIngredientID] = newIngredientAmountEntry
 	}
 
-	newRecipe := Recipe{
+	newRecipe := domain.Recipe{
 		ResultID:    dto.Result.ID,
 		Yield:       dto.Result.Count,
 		Ingredients: ingredients,
@@ -49,8 +50,8 @@ func ResolveShapedRecipe(dto CraftingShapedRecipeDTO, tags TagRegistry) (*Recipe
 	return &newRecipe, nil
 }
 
-func ResolveShapelessRecipe(dto CraftingShapelessRecipeDTO, tags TagRegistry) (*Recipe, error) {
-	ingredients := make(map[string]IngredientAmount)
+func ResolveShapelessRecipe(dto CraftingShapelessRecipeDTO, tags TagRegistry) (*domain.Recipe, error) {
+	ingredients := make(map[string]domain.IngredientAmount)
 
 	for _, ingredientString := range dto.Ingredients {
 		newIngredient, err := resolveIngredient(ingredientString, tags)
@@ -58,10 +59,10 @@ func ResolveShapelessRecipe(dto CraftingShapelessRecipeDTO, tags TagRegistry) (*
 			return nil, err
 		}
 
-		id := newIngredient.getID()
+		id := newIngredient.GetID()
 		entry, exists := ingredients[id]
 		if !exists {
-			entry = IngredientAmount{
+			entry = domain.IngredientAmount{
 				Ingredient: newIngredient,
 				Amount:     0,
 			}
@@ -70,7 +71,7 @@ func ResolveShapelessRecipe(dto CraftingShapelessRecipeDTO, tags TagRegistry) (*
 		ingredients[id] = entry
 	}
 
-	newRecipe := Recipe{
+	newRecipe := domain.Recipe{
 		ResultID:    dto.Result.ID,
 		Yield:       dto.Result.Count,
 		Ingredients: ingredients,
@@ -79,7 +80,7 @@ func ResolveShapelessRecipe(dto CraftingShapelessRecipeDTO, tags TagRegistry) (*
 	return &newRecipe, nil
 }
 
-func ResolveSmeltingRecipe(dto SmeltingRecipeDTO, tags TagRegistry) (*Recipe, error) {
+func ResolveSmeltingRecipe(dto SmeltingRecipeDTO, tags TagRegistry) (*domain.Recipe, error) {
 	var ingredientsStrings []string
 	if err := json.Unmarshal(dto.Ingredient, &ingredientsStrings); err != nil {
 		var single string
@@ -89,7 +90,7 @@ func ResolveSmeltingRecipe(dto SmeltingRecipeDTO, tags TagRegistry) (*Recipe, er
 		ingredientsStrings = append(ingredientsStrings, single)
 	}
 
-	ingredients := make(map[string]IngredientAmount)
+	ingredients := make(map[string]domain.IngredientAmount)
 
 	if len(ingredientsStrings) == 0 {
 		return nil, fmt.Errorf("smelting recipe has no ingredients")
@@ -100,12 +101,12 @@ func ResolveSmeltingRecipe(dto SmeltingRecipeDTO, tags TagRegistry) (*Recipe, er
 		return nil, err
 	}
 
-	ingredients[firstIngredient.getID()] = IngredientAmount{
+	ingredients[firstIngredient.GetID()] = domain.IngredientAmount{
 		Ingredient: firstIngredient,
 		Amount:     1,
 	}
 
-	newRecipe := Recipe{
+	newRecipe := domain.Recipe{
 		ResultID:    dto.Result.ID,
 		Yield:       dto.Result.Count,
 		Ingredients: ingredients,
@@ -114,7 +115,7 @@ func ResolveSmeltingRecipe(dto SmeltingRecipeDTO, tags TagRegistry) (*Recipe, er
 	return &newRecipe, nil
 }
 
-func resolveIngredient(ingredientString string, tags TagRegistry) (Ingredient, error) {
+func resolveIngredient(ingredientString string, tags TagRegistry) (domain.Ingredient, error) {
 	if tagID, ok := strings.CutPrefix(ingredientString, "#"); ok {
 		tag, exists := tags[tagID]
 		if !exists {
@@ -122,16 +123,16 @@ func resolveIngredient(ingredientString string, tags TagRegistry) (Ingredient, e
 		}
 		return tag, nil
 	}
-	return Item{ID: ingredientString}, nil
+	return domain.Item{ID: ingredientString}, nil
 }
 
 func ResolveTags(rawTags map[string]TagDTO) (TagRegistry, error) {
 	registry := make(TagRegistry)
 
 	// We declare the function signature first so it can call itself recursively
-	var resolve func(tagID string) (Ingredient, error)
+	var resolve func(tagID string) (domain.Ingredient, error)
 
-	resolve = func(tagID string) (Ingredient, error) {
+	resolve = func(tagID string) (domain.Ingredient, error) {
 		// 1. If we already resolved this tag, just return the cached pointer!
 		if resolvedTag, exists := registry[tagID]; exists {
 			return resolvedTag, nil
@@ -145,7 +146,7 @@ func ResolveTags(rawTags map[string]TagDTO) (TagRegistry, error) {
 
 		// 3. Create the Domain Tag. We put it in the registry early
 		// to prevent infinite loops if two tags reference each other.
-		domainTag := &Tag{ID: tagID}
+		domainTag := &domain.Tag{ID: tagID}
 		registry[tagID] = domainTag
 
 		// 4. Resolve all its children (Items and Sub-Tags)
@@ -160,7 +161,7 @@ func ResolveTags(rawTags map[string]TagDTO) (TagRegistry, error) {
 				domainTag.Items = append(domainTag.Items, subTag)
 			} else {
 				// It's just a regular item
-				domainTag.Items = append(domainTag.Items, Item{ID: val})
+				domainTag.Items = append(domainTag.Items, domain.Item{ID: val})
 			}
 		}
 

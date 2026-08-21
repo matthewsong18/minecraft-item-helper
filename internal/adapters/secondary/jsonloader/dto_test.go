@@ -1,6 +1,7 @@
-package main
+package jsonloader_test
 
 import (
+	"minecraft-item-helper/internal/adapters/secondary/jsonloader"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -11,7 +12,7 @@ func Test_parseRecipeDTO(t *testing.T) {
 		name string // description of this test case
 		// Named input parameters for target function.
 		recipeData []byte
-		want       RecipeDTO
+		want       jsonloader.RecipeDTO
 		wantErr    bool
 	}{
 		{
@@ -32,7 +33,7 @@ func Test_parseRecipeDTO(t *testing.T) {
 					    "id": "minecraft:acacia_boat"
 					  }
 			}`),
-			want: CraftingShapedRecipeDTO{
+			want: jsonloader.CraftingShapedRecipeDTO{
 				Type: "minecraft:crafting_shaped",
 				Pattern: []string{
 					"# #",
@@ -41,7 +42,7 @@ func Test_parseRecipeDTO(t *testing.T) {
 				Key: map[string]string{
 					"#": "minecraft:acacia_planks",
 				},
-				Result: RecipeResultDTO{
+				Result: jsonloader.RecipeResultDTO{
 					ID:    "minecraft:acacia_boat",
 					Count: 1,
 				},
@@ -67,7 +68,7 @@ func Test_parseRecipeDTO(t *testing.T) {
 				"id": "minecraft:barrel"
 				}
 			}`),
-			want: CraftingShapedRecipeDTO{
+			want: jsonloader.CraftingShapedRecipeDTO{
 				Type: "minecraft:crafting_shaped",
 				Pattern: []string{
 					"PSP",
@@ -78,7 +79,7 @@ func Test_parseRecipeDTO(t *testing.T) {
 					"P": "#minecraft:planks",
 					"S": "#minecraft:wooden_slabs",
 				},
-				Result: RecipeResultDTO{
+				Result: jsonloader.RecipeResultDTO{
 					ID:    "minecraft:barrel",
 					Count: 1,
 				},
@@ -88,7 +89,7 @@ func Test_parseRecipeDTO(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := ParseRecipeDTO(tt.recipeData)
+			got, gotErr := jsonloader.ParseRecipeDTO(tt.recipeData)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("parseRecipeDTO() failed: %v", gotErr)
@@ -112,7 +113,7 @@ func Test_parseTagDTO(t *testing.T) {
 		name string // description of this test case
 		// Named input parameters for target function.
 		tagData []byte
-		want    *TagDTO
+		want    *jsonloader.TagDTO
 		wantErr bool
 	}{
 		{
@@ -135,7 +136,7 @@ func Test_parseTagDTO(t *testing.T) {
 				  ]
 				}
 			`),
-			want: &TagDTO{
+			want: &jsonloader.TagDTO{
 				Values: []string{
 					"minecraft:oak_planks",
 					"minecraft:spruce_planks",
@@ -156,7 +157,7 @@ func Test_parseTagDTO(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := parseTagDTO(tt.tagData)
+			got, gotErr := jsonloader.ParseTagDTO(tt.tagData)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("parseTagDTO() failed: %v", gotErr)

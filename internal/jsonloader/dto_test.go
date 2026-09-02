@@ -1,7 +1,7 @@
 package jsonloader_test
 
 import (
-	"minecraft-item-helper/internal/adapters/secondary/jsonloader"
+	"minecraft-item-helper/internal/jsonloader"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"

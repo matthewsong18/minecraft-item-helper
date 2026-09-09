@@ -24,6 +24,7 @@ type CalculateItemTreeRequest struct {
 }
 
 type CalculateItemTreeResponse struct {
+	Root       *domain.TreeNode
 	FlatMap    map[domain.ItemID]domain.Amount // Map of necessary items and amounts to fulfill the request
 	Remainders map[domain.ItemID]domain.Amount // Map of items remaining from crafting process
 }
@@ -40,10 +41,16 @@ func (c *CraftService) CalculateItemTree(ctx context.Context, req CalculateItemT
 		TagRepo:    c.tagRepo,
 	}
 
-	err := planCalculation.Execute()
+	treeResult, err := planCalculation.Execute(ctx)
 	if err != nil {
 		return CalculateItemTreeResponse{}, err
 	}
 
-	panic("Unimplemented")
+	response := CalculateItemTreeResponse{
+		Root:       treeResult.Root,
+		FlatMap:    treeResult.FlatMap,
+		Remainders: treeResult.Remainders,
+	}
+
+	return response, nil
 }

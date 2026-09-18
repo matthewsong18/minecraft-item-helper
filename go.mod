@@ -1,5 +1,5 @@
 module minecraft-item-helper
 
-go 1.26.2
+go 1.27
 
 require github.com/google/go-cmp v0.7.0

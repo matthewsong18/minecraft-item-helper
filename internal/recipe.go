@@ -17,20 +17,12 @@ func ResolveBaseMaterials(item string, amount int, recipes map[string]Recipe) ma
 	multiplier := getRecipeMultiplier(amount, recipe.Yield)
 
 	for inputItem, inputAmount := range recipe.Inputs {
-		materials := ResolveBaseMaterials(inputItem, inputAmount, recipes)
-		multipliedMaterials := applyMultiplier(materials, multiplier)
-		appendMaps(baseMaterials, multipliedMaterials)
+		totalRequired := multiplier * inputAmount
+		materials := ResolveBaseMaterials(inputItem, totalRequired, recipes)
+		appendMaps(baseMaterials, materials)
 	}
 
 	return baseMaterials
-}
-
-func applyMultiplier(materials map[string]int, multiplier int) map[string]int {
-	multipliedMaterials := make(map[string]int)
-	for mItem, mAmount := range materials {
-		multipliedMaterials[mItem] = mAmount * multiplier
-	}
-	return multipliedMaterials
 }
 
 func appendMaps(destMap map[string]int, srcMap map[string]int) {

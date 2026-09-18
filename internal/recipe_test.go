@@ -76,6 +76,31 @@ func TestResolveBaseMaterials(t *testing.T) {
 			inputs: map[string]int{"planks": 8},
 			want:   map[string]int{"log": 2},
 		},
+		{
+			name: "test multiplier on varying levels of base materials",
+			recipes: map[string]recipe.Recipe{
+				"iron-pickaxe": {
+					Yield: 1,
+					Inputs: map[string]int{
+						"iron-ingot": 3,
+						"stick":      2,
+					},
+				},
+				"stick": {
+					Yield:  4,
+					Inputs: map[string]int{"planks": 2},
+				},
+				"planks": {
+					Yield:  4,
+					Inputs: map[string]int{"log": 1},
+				},
+			},
+			inputs: map[string]int{"iron-pickaxe": 3},
+			want: map[string]int{
+				"iron-ingot": 9,
+				"log":        1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

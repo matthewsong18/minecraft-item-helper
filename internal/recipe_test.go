@@ -1,0 +1,38 @@
+package main_test
+
+import (
+	main "minecraft-item-helper/internal"
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+func TestResolveBaseMaterials(t *testing.T) {
+	tests := []struct {
+		name    string // description of this test case
+		recipes map[string]main.Recipe
+		inputs  map[string]int
+		want    map[string]int
+	}{
+		{
+			name: "test raw materials for a direct recipe",
+			recipes: map[string]main.Recipe{
+				"planks": {
+					Yield:  4,
+					Inputs: map[string]int{"log": 1},
+				},
+			},
+			inputs: map[string]int{"planks": 4},
+			want:   map[string]int{"log": 1},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := main.ResolveBaseMaterials(tt.inputs, tt.recipes)
+
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Fatalf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}

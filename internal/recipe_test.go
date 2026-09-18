@@ -40,15 +40,39 @@ func TestResolveBaseMaterials(t *testing.T) {
 			inputs: map[string]int{"stick": 4},
 			want:   map[string]int{"log": 1},
 		},
+		{
+			name: "test recipe with varying levels of base materials",
+			recipes: map[string]recipe.Recipe{
+				"iron-pickaxe": {
+					Yield: 1,
+					Inputs: map[string]int{
+						"iron-ingot": 3,
+						"stick":      2,
+					},
+				},
+				"planks": {
+					Yield:  4,
+					Inputs: map[string]int{"log": 1},
+				},
+				"stick": {
+					Yield:  4,
+					Inputs: map[string]int{"planks": 2},
+				},
+			},
+			inputs: map[string]int{"iron-pickaxe": 1},
+			want: map[string]int{
+				"iron-ingot": 3,
+				"log":        1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for item, amount := range tt.inputs {
-
 				got := recipe.ResolveBaseMaterials(item, amount, tt.recipes)
 
 				if diff := cmp.Diff(tt.want, got); diff != "" {
-					t.Fatalf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)
+					t.Errorf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)
 				}
 			}
 		})

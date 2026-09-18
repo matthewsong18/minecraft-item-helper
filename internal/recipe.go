@@ -1,12 +1,22 @@
 package recipe
 
 type Recipe struct {
-	Yield  int
-	Inputs map[string]int
+	Yield  uint
+	Inputs map[string]uint
 }
 
-func ResolveBaseMaterials(item string, amount int, recipes map[string]Recipe) map[string]int {
-	baseMaterials := make(map[string]int)
+type Request struct {
+	RequestedItem   string
+	RequestedAmount uint
+	Recipes         map[string]Recipe
+}
+
+func ResolveBaseMaterials(req Request) map[string]uint {
+	baseMaterials := make(map[string]uint)
+
+	recipes := req.Recipes
+	item := req.RequestedItem
+	amount := req.RequestedAmount
 
 	recipe, ok := recipes[item]
 	if !ok {
@@ -18,19 +28,23 @@ func ResolveBaseMaterials(item string, amount int, recipes map[string]Recipe) ma
 
 	for inputItem, inputAmount := range recipe.Inputs {
 		totalRequired := multiplier * inputAmount
-		materials := ResolveBaseMaterials(inputItem, totalRequired, recipes)
+		materials := ResolveBaseMaterials(Request{
+			RequestedItem:   inputItem,
+			RequestedAmount: totalRequired,
+			Recipes:         recipes,
+		})
 		appendMaps(baseMaterials, materials)
 	}
 
 	return baseMaterials
 }
 
-func appendMaps(destMap map[string]int, srcMap map[string]int) {
+func appendMaps(destMap map[string]uint, srcMap map[string]uint) {
 	for item, amount := range srcMap {
 		destMap[item] += amount
 	}
 }
 
-func getRecipeMultiplier(target int, yield int) int {
+func getRecipeMultiplier(target uint, yield uint) uint {
 	return (target + yield - 1) / yield
 }

@@ -11,8 +11,16 @@ type Request struct {
 	Recipes         map[string]Recipe
 }
 
-func ResolveBaseMaterials(req Request) map[string]uint {
-	baseMaterials := make(map[string]uint)
+type Response struct {
+	FlatMap   map[string]uint
+	Inventory map[string]uint
+}
+
+func ResolveBaseMaterials(req Request) Response {
+	response := Response{
+		FlatMap:   map[string]uint{},
+		Inventory: nil,
+	}
 
 	recipes := req.Recipes
 	item := req.RequestedItem
@@ -20,8 +28,8 @@ func ResolveBaseMaterials(req Request) map[string]uint {
 
 	recipe, ok := recipes[item]
 	if !ok {
-		baseMaterials[item] += amount
-		return baseMaterials
+		response.FlatMap[item] += amount
+		return response
 	}
 
 	multiplier := getRecipeMultiplier(amount, recipe.Yield)
@@ -33,10 +41,10 @@ func ResolveBaseMaterials(req Request) map[string]uint {
 			RequestedAmount: totalRequired,
 			Recipes:         recipes,
 		})
-		appendMaps(baseMaterials, materials)
+		appendMaps(response.FlatMap, materials.FlatMap)
 	}
 
-	return baseMaterials
+	return response
 }
 
 func appendMaps(destMap map[string]uint, srcMap map[string]uint) {

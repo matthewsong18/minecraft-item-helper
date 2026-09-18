@@ -12,7 +12,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 		name    string // description of this test case
 		recipes map[string]recipe.Recipe
 		inputs  map[string]uint
-		want    map[string]uint
+		want    recipe.Response
 	}{
 		{
 			name: "test raw materials for a direct recipe",
@@ -23,7 +23,9 @@ func TestResolveBaseMaterials(t *testing.T) {
 				},
 			},
 			inputs: map[string]uint{"planks": 4},
-			want:   map[string]uint{"log": 1},
+			want: recipe.Response{
+				FlatMap: map[string]uint{"log": 1},
+			},
 		},
 		{
 			name: "test nested two-step recipe",
@@ -38,7 +40,9 @@ func TestResolveBaseMaterials(t *testing.T) {
 				},
 			},
 			inputs: map[string]uint{"stick": 4},
-			want:   map[string]uint{"log": 1},
+			want: recipe.Response{
+				FlatMap: map[string]uint{"log": 1},
+			},
 		},
 		{
 			name: "test recipe with varying levels of base materials",
@@ -60,9 +64,11 @@ func TestResolveBaseMaterials(t *testing.T) {
 				},
 			},
 			inputs: map[string]uint{"iron-pickaxe": 1},
-			want: map[string]uint{
-				"iron-ingot": 3,
-				"log":        1,
+			want: recipe.Response{
+				FlatMap: map[string]uint{
+					"iron-ingot": 3,
+					"log":        1,
+				},
 			},
 		},
 		{
@@ -74,7 +80,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 				},
 			},
 			inputs: map[string]uint{"planks": 8},
-			want:   map[string]uint{"log": 2},
+			want:   recipe.Response{FlatMap: map[string]uint{"log": 2}},
 		},
 		{
 			name: "test multiplier on varying levels of base materials",
@@ -96,10 +102,10 @@ func TestResolveBaseMaterials(t *testing.T) {
 				},
 			},
 			inputs: map[string]uint{"iron-pickaxe": 3},
-			want: map[string]uint{
+			want: recipe.Response{FlatMap: map[string]uint{
 				"iron-ingot": 9,
 				"log":        1,
-			},
+			}},
 		},
 	}
 	for _, tt := range tests {

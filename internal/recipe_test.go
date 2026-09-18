@@ -118,6 +118,33 @@ func TestResolveBaseMaterials(t *testing.T) {
 				"log":        1,
 			}},
 		},
+		{
+			name: "test adding extra items to inventory",
+			inputs: recipe.Request{
+				RequestedItem:   "stick",
+				RequestedAmount: 3,
+				Recipes: map[string]recipe.Recipe{
+					"stick": {
+						Yield:  4,
+						Inputs: map[string]uint{"planks": 2},
+					},
+					"planks": {
+						Yield:  4,
+						Inputs: map[string]uint{"log": 1},
+					},
+				},
+				Inventory: map[string]uint{},
+			},
+			want: recipe.Response{
+				FlatMap: map[string]uint{
+					"log": 1,
+				},
+				Inventory: map[string]uint{
+					"planks": 2,
+					"stick":  1,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

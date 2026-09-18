@@ -1,5 +1,7 @@
 package recipe
 
+import "maps"
+
 type Recipe struct {
 	Yield  uint
 	Inputs map[string]uint
@@ -9,6 +11,7 @@ type Request struct {
 	RequestedItem   string
 	RequestedAmount uint
 	Recipes         map[string]Recipe
+	Inventory       map[string]uint
 }
 
 type Response struct {
@@ -23,26 +26,54 @@ func ResolveBaseMaterials(req Request) Response {
 	}
 
 	recipes := req.Recipes
-	item := req.RequestedItem
-	amount := req.RequestedAmount
+	requestedItem := req.RequestedItem
+	requestedAmount := req.RequestedAmount
 
-	recipe, ok := recipes[item]
-	if !ok {
-		response.FlatMap[item] += amount
+	hasInventory := req.Inventory != nil
+	if hasInventory {
+		response.Inventory = maps.Clone(req.Inventory)
+
+		if ownedAmount, haveItem := req.Inventory[requestedItem]; haveItem {
+			if requestedAmount <= ownedAmount {
+				req.Inventory[requestedItem] -= requestedAmount
+				response.Inventory = maps.Clone(req.Inventory)
+				return response
+			}
+
+			requestedAmount -= ownedAmount
+			delete(response.Inventory, requestedItem)
+		}
+	}
+
+	recipe, hasRecipe := recipes[requestedItem]
+	if !hasRecipe {
+		response.FlatMap[requestedItem] += requestedAmount
 		return response
 	}
 
-	multiplier := getRecipeMultiplier(amount, recipe.Yield)
+	multiplier := getRecipeMultiplier(requestedAmount, recipe.Yield)
+
+	totalProduced := multiplier * recipe.Yield
+	if leftover := totalProduced - requestedAmount; leftover > 0 && hasInventory {
+		response.Inventory[requestedItem] += leftover
+	}
+
+	currentInventory := response.Inventory
 
 	for inputItem, inputAmount := range recipe.Inputs {
-		totalRequired := multiplier * inputAmount
-		materials := ResolveBaseMaterials(Request{
+		totalNeeded := multiplier * inputAmount
+		subResult := ResolveBaseMaterials(Request{
 			RequestedItem:   inputItem,
-			RequestedAmount: totalRequired,
+			RequestedAmount: totalNeeded,
 			Recipes:         recipes,
+			Inventory:       currentInventory,
 		})
-		appendMaps(response.FlatMap, materials.FlatMap)
+
+		appendMaps(response.FlatMap, subResult.FlatMap)
+		currentInventory = subResult.Inventory
 	}
+
+	response.Inventory = currentInventory
 
 	return response
 }

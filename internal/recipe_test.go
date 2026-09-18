@@ -65,6 +65,17 @@ func TestResolveBaseMaterials(t *testing.T) {
 				"log":        1,
 			},
 		},
+		{
+			name: "test multiplying by yield amount",
+			recipes: map[string]recipe.Recipe{
+				"planks": {
+					Yield:  4,
+					Inputs: map[string]int{"log": 1},
+				},
+			},
+			inputs: map[string]int{"planks": 8},
+			want:   map[string]int{"log": 2},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

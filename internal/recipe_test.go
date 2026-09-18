@@ -25,13 +25,31 @@ func TestResolveBaseMaterials(t *testing.T) {
 			inputs: map[string]int{"planks": 4},
 			want:   map[string]int{"log": 1},
 		},
+		{
+			name: "test nested two-step recipe",
+			recipes: map[string]main.Recipe{
+				"planks": {
+					Yield:  4,
+					Inputs: map[string]int{"log": 1},
+				},
+				"stick": {
+					Yield:  4,
+					Inputs: map[string]int{"planks": 2},
+				},
+			},
+			inputs: map[string]int{"stick": 4},
+			want:   map[string]int{"log": 1},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := main.ResolveBaseMaterials(tt.inputs, tt.recipes)
+			for item, amount := range tt.inputs {
 
-			if diff := cmp.Diff(tt.want, got); diff != "" {
-				t.Fatalf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)
+				got := main.ResolveBaseMaterials(item, amount, tt.recipes)
+
+				if diff := cmp.Diff(tt.want, got); diff != "" {
+					t.Fatalf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}

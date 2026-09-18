@@ -1,18 +1,25 @@
 package main
 
-import "maps"
-
 type Recipe struct {
 	Yield  int
 	Inputs map[string]int
 }
 
-func ResolveBaseMaterials(inputs map[string]int, recipes map[string]Recipe) map[string]int {
+func ResolveBaseMaterials(item string, amount int, recipes map[string]Recipe) map[string]int {
 	baseMaterials := make(map[string]int)
-	for item := range inputs {
-		recipe := recipes[item]
+	recipe := recipes[item]
 
-		maps.Copy(baseMaterials, recipe.Inputs)
+	if len(recipe.Inputs) <= 0 {
+		baseMaterials[item] += amount
+		return baseMaterials
 	}
+
+	for item, amount := range recipe.Inputs {
+		materials := ResolveBaseMaterials(item, amount, recipes)
+		for item, amount := range materials {
+			baseMaterials[item] += amount
+		}
+	}
+
 	return baseMaterials
 }

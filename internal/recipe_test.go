@@ -1,7 +1,7 @@
-package main_test
+package recipe_test
 
 import (
-	main "minecraft-item-helper/internal"
+	recipe "minecraft-item-helper/internal"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -10,13 +10,13 @@ import (
 func TestResolveBaseMaterials(t *testing.T) {
 	tests := []struct {
 		name    string // description of this test case
-		recipes map[string]main.Recipe
+		recipes map[string]recipe.Recipe
 		inputs  map[string]int
 		want    map[string]int
 	}{
 		{
 			name: "test raw materials for a direct recipe",
-			recipes: map[string]main.Recipe{
+			recipes: map[string]recipe.Recipe{
 				"planks": {
 					Yield:  4,
 					Inputs: map[string]int{"log": 1},
@@ -27,7 +27,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 		},
 		{
 			name: "test nested two-step recipe",
-			recipes: map[string]main.Recipe{
+			recipes: map[string]recipe.Recipe{
 				"planks": {
 					Yield:  4,
 					Inputs: map[string]int{"log": 1},
@@ -45,7 +45,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			for item, amount := range tt.inputs {
 
-				got := main.ResolveBaseMaterials(item, amount, tt.recipes)
+				got := recipe.ResolveBaseMaterials(item, amount, tt.recipes)
 
 				if diff := cmp.Diff(tt.want, got); diff != "" {
 					t.Fatalf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)

@@ -1,4 +1,4 @@
-package main
+package recipe
 
 type Recipe struct {
 	Yield  int

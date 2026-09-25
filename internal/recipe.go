@@ -34,9 +34,12 @@ func ResolveBaseMaterials(req Request) Response {
 		response.Inventory = maps.Clone(req.Inventory)
 
 		if ownedAmount, haveItem := req.Inventory[requestedItem]; haveItem {
-			if requestedAmount <= ownedAmount {
+			if requestedAmount < ownedAmount {
 				req.Inventory[requestedItem] -= requestedAmount
 				response.Inventory = maps.Clone(req.Inventory)
+				return response
+			} else if requestedAmount == ownedAmount {
+				delete(response.Inventory, requestedItem)
 				return response
 			}
 

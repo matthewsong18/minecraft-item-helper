@@ -197,6 +197,66 @@ func TestResolveBaseMaterials(t *testing.T) {
 				Inventory: map[string]uint{},
 			},
 		},
+		{
+			name: "test resolving recipe requiring a tag using first candidate",
+			inputs: recipe.Request{
+				RequestedItem:   "stick",
+				RequestedAmount: 4,
+				Recipes: map[string]recipe.Recipe{
+					"stick": {
+						Yield:  4,
+						Inputs: map[string]uint{"#planks": 2}, // Input uses tag
+					},
+					"oak-planks": {
+						Yield:  4,
+						Inputs: map[string]uint{"oak-log": 1},
+					},
+				},
+				Tags: recipe.Tags{
+					"#planks": []string{"oak-planks", "birch-planks"},
+				},
+				Inventory: recipe.Inventory{},
+			},
+			want: recipe.Response{
+				FlatMap: map[string]uint{
+					"oak-log": 1,
+				},
+				Inventory: map[string]uint{
+					"oak-planks": 2, // 4 produced, 2 consumed for sticks
+				},
+			},
+		},
+		{
+			name: "test resolving recipe requiring a tag preferring existing inventory",
+			inputs: recipe.Request{
+				RequestedItem:   "stick",
+				RequestedAmount: 4,
+				Recipes: map[string]recipe.Recipe{
+					"stick": {
+						Yield:  4,
+						Inputs: map[string]uint{"#planks": 2},
+					},
+					"oak-planks": {
+						Yield:  4,
+						Inputs: map[string]uint{"oak-log": 1},
+					},
+					"birch-planks": {
+						Yield:  4,
+						Inputs: map[string]uint{"birch-log": 1},
+					},
+				},
+				Tags: recipe.Tags{
+					"#planks": []string{"oak-planks", "birch-planks"},
+				},
+				Inventory: map[string]uint{
+					"birch-planks": 2, // Already have birch, should pick birch instead of oak
+				},
+			},
+			want: recipe.Response{
+				FlatMap:   map[string]uint{}, // No logs needed, birch was already available
+				Inventory: map[string]uint{}, // 2 birch consumed completely
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

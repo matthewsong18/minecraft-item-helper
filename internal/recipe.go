@@ -1,6 +1,9 @@
 package recipe
 
-import "maps"
+import (
+	"maps"
+	"strings"
+)
 
 type Recipe struct {
 	Yield  uint
@@ -9,10 +12,13 @@ type Recipe struct {
 
 type Inventory map[string]uint
 
+type Tags map[string][]string
+
 type Request struct {
 	RequestedItem   string
 	RequestedAmount uint
 	Recipes         map[string]Recipe
+	Tags            Tags
 	Inventory       Inventory
 }
 
@@ -28,8 +34,20 @@ func ResolveBaseMaterials(req Request) Response {
 	}
 
 	recipes := req.Recipes
+	tags := req.Tags
 	requestedItem := req.RequestedItem
 	requestedAmount := req.RequestedAmount
+
+	isTag := strings.HasPrefix(requestedItem, "#")
+	if isTag {
+		requestedTag := requestedItem
+		for tag, items := range tags {
+			if tag == requestedTag {
+				requestedItem = items[0]
+				break
+			}
+		}
+	}
 
 	hasInventory := req.Inventory != nil
 	if hasInventory {
@@ -63,6 +81,7 @@ func ResolveBaseMaterials(req Request) Response {
 			RequestedItem:   inputItem,
 			RequestedAmount: totalNeeded,
 			Recipes:         recipes,
+			Tags:            tags,
 			Inventory:       currentInventory,
 		})
 

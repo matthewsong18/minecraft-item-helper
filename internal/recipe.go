@@ -7,11 +7,13 @@ type Recipe struct {
 	Inputs map[string]uint
 }
 
+type Inventory map[string]uint
+
 type Request struct {
 	RequestedItem   string
 	RequestedAmount uint
 	Recipes         map[string]Recipe
-	Inventory       map[string]uint
+	Inventory       Inventory
 }
 
 type Response struct {
@@ -31,21 +33,11 @@ func ResolveBaseMaterials(req Request) Response {
 
 	hasInventory := req.Inventory != nil
 	if hasInventory {
-		response.Inventory = maps.Clone(req.Inventory)
+		response.Inventory, requestedAmount = grabItemFromInventory(req.Inventory, requestedItem, requestedAmount)
+	}
 
-		if ownedAmount, haveItem := req.Inventory[requestedItem]; haveItem {
-			if requestedAmount < ownedAmount {
-				req.Inventory[requestedItem] -= requestedAmount
-				response.Inventory = maps.Clone(req.Inventory)
-				return response
-			} else if requestedAmount == ownedAmount {
-				delete(response.Inventory, requestedItem)
-				return response
-			}
-
-			requestedAmount -= ownedAmount
-			delete(response.Inventory, requestedItem)
-		}
+	if requestedAmount == 0 {
+		return response
 	}
 
 	recipe, hasRecipe := recipes[requestedItem]
@@ -57,7 +49,9 @@ func ResolveBaseMaterials(req Request) Response {
 	multiplier := getRecipeMultiplier(requestedAmount, recipe.Yield)
 
 	totalProduced := multiplier * recipe.Yield
-	if leftover := totalProduced - requestedAmount; leftover > 0 && hasInventory {
+	leftover := totalProduced - requestedAmount
+
+	if leftover > 0 && hasInventory {
 		response.Inventory[requestedItem] += leftover
 	}
 
@@ -89,4 +83,26 @@ func appendMaps(destMap map[string]uint, srcMap map[string]uint) {
 
 func getRecipeMultiplier(target uint, yield uint) uint {
 	return (target + yield - 1) / yield
+}
+
+func grabItemFromInventory(inventory Inventory, requestedItem string, requestedAmount uint) (Inventory, uint) {
+	returnInventory := maps.Clone(inventory)
+
+	ownedAmount, haveItem := returnInventory[requestedItem]
+	if !haveItem {
+		return returnInventory, requestedAmount
+	}
+
+	ownMoreThanRequested := requestedAmount < ownedAmount
+	if ownMoreThanRequested {
+		returnInventory[requestedItem] -= requestedAmount
+	} else if requestedAmount == ownedAmount {
+		delete(returnInventory, requestedItem)
+	} else {
+		requestedAmount -= ownedAmount
+		delete(returnInventory, requestedItem)
+		return returnInventory, requestedAmount
+	}
+
+	return returnInventory, 0
 }

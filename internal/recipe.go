@@ -1,6 +1,7 @@
 package recipe
 
 import (
+	"fmt"
 	"maps"
 	"strings"
 )
@@ -38,18 +39,39 @@ func ResolveBaseMaterials(req Request) Response {
 	requestedItem := req.RequestedItem
 	requestedAmount := req.RequestedAmount
 
+	hasInventory := req.Inventory != nil
+
 	isTag := strings.HasPrefix(requestedItem, "#")
 	if isTag {
 		requestedTag := requestedItem
 		for tag, items := range tags {
 			if tag == requestedTag {
 				requestedItem = items[0]
+
+				if !hasInventory {
+					break
+				}
+
+				var bestItem string
+				var bestItemAmount uint
+				for _, item := range items {
+					amount, err := req.Inventory.findAmountOf(item)
+
+					if err == nil && amount > bestItemAmount {
+						bestItemAmount = amount
+						bestItem = item
+					}
+				}
+
+				if bestItemAmount != 0 {
+					requestedItem = bestItem
+				}
+
 				break
 			}
 		}
 	}
 
-	hasInventory := req.Inventory != nil
 	if hasInventory {
 		response.Inventory, requestedAmount = grabItemFromInventory(req.Inventory, requestedItem, requestedAmount)
 	}
@@ -124,4 +146,12 @@ func grabItemFromInventory(inventory Inventory, requestedItem string, requestedA
 	}
 
 	return returnInventory, 0
+}
+
+func (i Inventory) findAmountOf(requestedItem string) (uint, error) {
+	if amountOwned, foundItem := i[requestedItem]; foundItem {
+		return amountOwned, nil
+	}
+
+	return 0, fmt.Errorf("Inventory does not contain %v", requestedItem)
 }

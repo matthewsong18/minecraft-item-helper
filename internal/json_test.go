@@ -34,6 +34,35 @@ func Test_parseJsonRecipe(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Shaped Recipe",
+			jsonInput: `	
+				{
+				  "type": "minecraft:crafting_shaped",
+				  "category": "misc",
+				  "key": {
+				    "I": "minecraft:iron_block",
+				    "i": "minecraft:iron_ingot"
+				  },
+				  "pattern": [
+				    "III",
+				    " i ",
+				    "iii"
+				  ],
+				  "result": {
+				    "count": 1,
+				    "id": "minecraft:anvil"
+				  }
+				}
+			`,
+			output: &internal.Recipe{
+				Yield: 1,
+				Inputs: map[string]uint{
+					"minecraft:iron_block": 3,
+					"minecraft:iron_ingot": 4,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -34,25 +34,29 @@ func ParseJsonRecipe(data []byte) (*Recipe, error) {
 
 	switch router.Type {
 	case "minecraft:crafting_shapeless":
-		var dto Shapeless
-		if err := json.Unmarshal(data, &dto); err != nil {
-			return nil, err
-		}
-
-		inputs := make(map[string]uint)
-		for _, item := range dto.Ingredients {
-			inputs[item] += 1
-		}
-
-		return &Recipe{
-			Yield:  dto.Result.Count,
-			Inputs: inputs,
-		}, nil
+		return handleShapelessRecipe(data)
 	case "minecraft:crafting_shaped":
 		return handleShapedRecipe(data)
 	default:
 		return nil, fmt.Errorf("unknown recipe type: %s", router.Type)
 	}
+}
+
+func handleShapelessRecipe(data []byte) (*Recipe, error) {
+	var dto Shapeless
+	if err := json.Unmarshal(data, &dto); err != nil {
+		return nil, err
+	}
+
+	inputs := make(map[string]uint)
+	for _, item := range dto.Ingredients {
+		inputs[item] += 1
+	}
+
+	return &Recipe{
+		Yield:  dto.Result.Count,
+		Inputs: inputs,
+	}, nil
 }
 
 func handleShapedRecipe(data []byte) (*Recipe, error) {

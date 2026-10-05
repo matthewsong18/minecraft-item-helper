@@ -2,6 +2,7 @@ package internal
 
 import (
 	"encoding/json"
+	"fmt"
 )
 
 type Shapeless struct {
@@ -13,18 +14,31 @@ type Shapeless struct {
 }
 
 func ParseJsonRecipe(data []byte) (*Recipe, error) {
-	var dto Shapeless
-	err := json.Unmarshal(data, &dto)
-	if err != nil {
-		return nil, err
+	var router struct {
+		Type string `json:"type"`
 	}
 
-	ing := dto.Ingredients[0]
+	if err := json.Unmarshal(data, &router); err != nil {
+		return nil, fmt.Errorf("failed to parse message type: %w", err)
+	}
 
-	return &Recipe{
-		Yield: dto.Result.Count,
-		Inputs: map[string]uint{
-			ing: 1,
-		},
-	}, nil
+	switch router.Type {
+	case "minecraft:crafting_shapeless":
+		var dto Shapeless
+		if err := json.Unmarshal(data, &dto); err != nil {
+			return nil, err
+		}
+
+		inputs := make(map[string]uint)
+		for _, item := range dto.Ingredients {
+			inputs[item] += 1
+		}
+
+		return &Recipe{
+			Yield:  dto.Result.Count,
+			Inputs: inputs,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown recipe type: %s", router.Type)
+	}
 }

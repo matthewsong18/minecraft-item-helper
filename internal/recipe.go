@@ -1,4 +1,4 @@
-package recipe
+package internal
 
 import (
 	"fmt"

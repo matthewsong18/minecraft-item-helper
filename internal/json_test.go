@@ -63,6 +63,27 @@ func Test_parseJsonRecipe(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Smelting Recipe",
+			jsonInput: `
+				{
+					"type": "minecraft:smelting",
+					"category": "food",
+					"cookingtime": 200,
+					"experience": 0.35,
+					"ingredient": "minecraft:potato",
+					"result": {
+						"id": "minecraft:baked_potato"
+					}
+				}
+			`,
+			output: &internal.Recipe{
+				Yield: 1,
+				Inputs: map[string]uint{
+					"minecraft:potato": 1,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

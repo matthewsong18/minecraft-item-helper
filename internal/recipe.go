@@ -6,9 +6,14 @@ import (
 	"strings"
 )
 
+type Ingredient struct {
+	Options []string // Some recipes have OR options like coal or charcoal for torches
+	Count   uint
+}
+
 type Recipe struct {
 	Yield  uint
-	Inputs map[string]uint
+	Inputs []Ingredient
 }
 
 type Inventory map[string]uint
@@ -97,10 +102,10 @@ func ResolveBaseMaterials(req Request) Response {
 
 	currentInventory := response.Inventory
 
-	for inputItem, inputAmount := range recipe.Inputs {
-		totalNeeded := multiplier * inputAmount
+	for _, ingredient := range recipe.Inputs {
+		totalNeeded := multiplier * ingredient.Count
 		subResult := ResolveBaseMaterials(Request{
-			RequestedItem:   inputItem,
+			RequestedItem:   ingredient.Options[0],
 			RequestedAmount: totalNeeded,
 			Recipes:         recipes,
 			Tags:            tags,

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 func Test_parseJsonRecipe(t *testing.T) {
@@ -31,9 +32,9 @@ func Test_parseJsonRecipe(t *testing.T) {
 				Id: "minecraft:oak_planks",
 				Recipe: internal.Recipe{
 					Yield: 4,
-					Inputs: map[string]uint{
-						"#minecraft:oak_logs": 1,
-					},
+					Inputs: inputs(
+						ingredient("#minecraft:oak_logs", 1),
+					),
 				},
 			},
 		},
@@ -62,10 +63,10 @@ func Test_parseJsonRecipe(t *testing.T) {
 				Id: "minecraft:anvil",
 				Recipe: internal.Recipe{
 					Yield: 1,
-					Inputs: map[string]uint{
-						"minecraft:iron_block": 3,
-						"minecraft:iron_ingot": 4,
-					},
+					Inputs: inputs(
+						ingredient("minecraft:iron_block", 3),
+						ingredient("minecraft:iron_ingot", 4),
+					),
 				},
 			},
 		},
@@ -87,18 +88,135 @@ func Test_parseJsonRecipe(t *testing.T) {
 				Id: "minecraft:baked_potato",
 				Recipe: internal.Recipe{
 					Yield: 1,
-					Inputs: map[string]uint{
-						"minecraft:potato": 1,
-					},
+					Inputs: inputs(
+						ingredient("minecraft:potato", 1),
+					),
 				},
 			},
 		},
+		{
+			name: "Shapeless Recipe with array in ingredients",
+			jsonInput: `
+				{
+				  "type": "minecraft:crafting_shapeless",
+				  "category": "misc",
+				  "group": "bed_dye",
+				  "ingredients": [
+				    "minecraft:red_dye",
+				    [
+				      "minecraft:black_bed",
+				      "minecraft:blue_bed",
+				      "minecraft:brown_bed",
+				      "minecraft:cyan_bed",
+				      "minecraft:gray_bed",
+				      "minecraft:green_bed",
+				      "minecraft:light_blue_bed",
+				      "minecraft:light_gray_bed",
+				      "minecraft:lime_bed",
+				      "minecraft:magenta_bed",
+				      "minecraft:orange_bed",
+				      "minecraft:pink_bed",
+				      "minecraft:purple_bed",
+				      "minecraft:yellow_bed",
+				      "minecraft:white_bed"
+				    ]
+				  ],
+				  "result": {
+				    "count": 1,
+				    "id": "minecraft:red_bed"
+				  }
+				}
+			`,
+			output: &internal.ParseJsonResponse{
+				Id: "minecraft:red_bed",
+				Recipe: internal.Recipe{
+					Yield: 1,
+					Inputs: inputs(
+						ingredient("minecraft:red_dye", 1),
+						internal.Ingredient{
+							Options: []string{
+								"minecraft:black_bed",
+								"minecraft:blue_bed",
+								"minecraft:brown_bed",
+								"minecraft:cyan_bed",
+								"minecraft:gray_bed",
+								"minecraft:green_bed",
+								"minecraft:light_blue_bed",
+								"minecraft:light_gray_bed",
+								"minecraft:lime_bed",
+								"minecraft:magenta_bed",
+								"minecraft:orange_bed",
+								"minecraft:pink_bed",
+								"minecraft:purple_bed",
+								"minecraft:yellow_bed",
+								"minecraft:white_bed",
+							},
+							Count: 1,
+						},
+					),
+				},
+			},
+		},
+		{
+			name: "Shaped Recipe with array in key",
+			jsonInput: `
+				{
+				  "type": "minecraft:crafting_shaped",
+				  "category": "misc",
+				  "key": {
+				    "#": "minecraft:stick",
+				    "X": [
+				      "minecraft:coal",
+				      "minecraft:charcoal"
+				    ]
+				  },
+				  "pattern": [
+				    "X",
+				    "#"
+				  ],
+				  "result": {
+				    "count": 4,
+				    "id": "minecraft:torch"
+				  }
+				}
+			`,
+			output: &internal.ParseJsonResponse{
+				Id: "minecraft:torch",
+				Recipe: internal.Recipe{
+					Yield: 4,
+					Inputs: inputs(
+						ingredient("minecraft:stick", 1),
+						internal.Ingredient{
+							Options: []string{
+								"minecraft:coal",
+								"minecraft:charcoal",
+							},
+							Count: 1,
+						},
+					),
+				},
+			},
+		},
+	}
+	lessIngredient := func(a, b internal.Ingredient) bool {
+		if len(a.Options) == 0 || len(b.Options) == 0 {
+			return len(a.Options) < len(b.Options)
+		}
+		return a.Options[0] < b.Options[0]
+	}
+
+	lessString := func(a, b string) bool {
+		return a < b
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, _ := internal.ParseJsonRecipe([]byte(tt.jsonInput))
 
-			if diff := cmp.Diff(tt.output, got); diff != "" {
+			diff := cmp.Diff(tt.output, got,
+				cmpopts.SortSlices(lessIngredient),
+				cmpopts.SortSlices(lessString),
+			)
+			if diff != "" {
 				t.Errorf("ParseJsonRecipe() mismatch (-want +got):\n%s", diff)
 			}
 		})

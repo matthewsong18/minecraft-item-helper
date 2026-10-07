@@ -35,9 +35,27 @@ func ParseJsonRecipe(data []byte) (*ParseJsonResponse, error) {
 	}
 }
 
+type RawIngredient []string
+
+func (r *RawIngredient) UnmarshalJSON(data []byte) error {
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		*r = []string{single}
+		return nil
+	}
+
+	var multiple []string
+	if err := json.Unmarshal(data, &multiple); err == nil {
+		*r = multiple
+		return nil
+	}
+
+	return fmt.Errorf("invalid ingredient format: %s", string(data))
+}
+
 func handleShapelessRecipe(data []byte) (*ParseJsonResponse, error) {
 	var dto struct {
-		Ingredients []string `json:"ingredients"`
+		Ingredients []RawIngredient `json:"ingredients"`
 		Result      struct {
 			Count uint   `json:"count"`
 			Id    string `json:"id"`
@@ -48,9 +66,31 @@ func handleShapelessRecipe(data []byte) (*ParseJsonResponse, error) {
 		return nil, err
 	}
 
-	inputs := make(map[string]uint)
-	for _, item := range dto.Ingredients {
-		inputs[item] += 1
+	groupedItems := make(map[string]Ingredient)
+	for _, raw := range dto.Ingredients {
+		if len(raw) > 1 {
+			// Just using raw[0] to get a key
+			groupedItems[raw[0]] = Ingredient{
+				Options: raw,
+				Count:   1,
+			}
+			continue
+		}
+
+		if existing, found := groupedItems[raw[0]]; found {
+			existing.Count++
+			groupedItems[raw[0]] = existing
+		} else {
+			groupedItems[raw[0]] = Ingredient{
+				Options: raw,
+				Count:   1,
+			}
+		}
+	}
+
+	var inputs []Ingredient
+	for _, ingredient := range groupedItems {
+		inputs = append(inputs, ingredient)
 	}
 
 	return &ParseJsonResponse{
@@ -64,8 +104,8 @@ func handleShapelessRecipe(data []byte) (*ParseJsonResponse, error) {
 
 func handleShapedRecipe(data []byte) (*ParseJsonResponse, error) {
 	var dto struct {
-		Key     map[string]string `json:"key"`
-		Pattern []string          `json:"pattern"`
+		Key     map[string]RawIngredient `json:"key"`
+		Pattern []string                 `json:"pattern"`
 		Result  struct {
 			Count uint   `json:"count"`
 			Id    string `json:"id"`
@@ -76,12 +116,25 @@ func handleShapedRecipe(data []byte) (*ParseJsonResponse, error) {
 		return nil, fmt.Errorf("failed to parse minecraft shaped recipe: %w", err)
 	}
 
-	inputs := make(map[string]uint)
-	for key, item := range dto.Key {
+	itemCounts := make(map[string]Ingredient)
+	for key, raw := range dto.Key {
 		for _, line := range dto.Pattern {
-			count := strings.Count(line, key)
-			inputs[item] += uint(count)
+			count := uint(strings.Count(line, key))
+			if existing, found := itemCounts[raw[0]]; found {
+				existing.Count += count
+				itemCounts[raw[0]] = existing
+			} else {
+				itemCounts[raw[0]] = Ingredient{
+					Options: raw,
+					Count:   count,
+				}
+			}
 		}
+	}
+
+	var inputs []Ingredient
+	for _, ingredient := range itemCounts {
+		inputs = append(inputs, ingredient)
 	}
 
 	return &ParseJsonResponse{
@@ -109,8 +162,11 @@ func handleSmeltingRecipe(data []byte) (*ParseJsonResponse, error) {
 		Id: dto.Result.Id,
 		Recipe: Recipe{
 			Yield: 1,
-			Inputs: map[string]uint{
-				dto.Ingredient: 1,
+			Inputs: []Ingredient{
+				{
+					Options: []string{dto.Ingredient},
+					Count:   1,
+				},
 			},
 		},
 	}, nil

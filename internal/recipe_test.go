@@ -20,8 +20,13 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 4,
 				Recipes: map[string]internal.Recipe{
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: []internal.Ingredient{
+							internal.Ingredient{
+								Options: []string{"log"},
+								Count:   1,
+							},
+						},
 					},
 				},
 			},
@@ -36,12 +41,22 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 4,
 				Recipes: map[string]internal.Recipe{
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: []internal.Ingredient{
+							{
+								Options: []string{"log"},
+								Count:   1,
+							},
+						},
 					},
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"planks": 2},
+						Yield: 4,
+						Inputs: []internal.Ingredient{
+							{
+								Options: []string{"planks"},
+								Count:   2,
+							},
+						},
 					},
 				},
 			},
@@ -57,18 +72,34 @@ func TestResolveBaseMaterials(t *testing.T) {
 				Recipes: map[string]internal.Recipe{
 					"iron-pickaxe": {
 						Yield: 1,
-						Inputs: map[string]uint{
-							"iron-ingot": 3,
-							"stick":      2,
+						Inputs: []internal.Ingredient{
+							{
+								Options: []string{"iron-ingot"},
+								Count:   3,
+							},
+							{
+								Options: []string{"stick"},
+								Count:   2,
+							},
 						},
 					},
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: []internal.Ingredient{
+							{
+								Options: []string{"log"},
+								Count:   1,
+							},
+						},
 					},
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"planks": 2},
+						Yield: 4,
+						Inputs: []internal.Ingredient{
+							{
+								Options: []string{"planks"},
+								Count:   2,
+							},
+						},
 					}},
 			},
 			want: internal.Response{
@@ -85,8 +116,13 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 8,
 				Recipes: map[string]internal.Recipe{
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: []internal.Ingredient{
+							{
+								Options: []string{"log"},
+								Count:   1,
+							},
+						},
 					}},
 			},
 			want: internal.Response{FlatMap: map[string]uint{"log": 2}},
@@ -99,18 +135,22 @@ func TestResolveBaseMaterials(t *testing.T) {
 				Recipes: map[string]internal.Recipe{
 					"iron-pickaxe": {
 						Yield: 1,
-						Inputs: map[string]uint{
-							"iron-ingot": 3,
-							"stick":      2,
-						},
+						Inputs: inputs(
+							ingredient("iron-ingot", 3),
+							ingredient("stick", 2),
+						),
 					},
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"planks": 2},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("planks", 2),
+						),
 					},
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("log", 1),
+						),
 					}},
 			},
 			want: internal.Response{FlatMap: map[string]uint{
@@ -125,12 +165,16 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 3,
 				Recipes: map[string]internal.Recipe{
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"planks": 2},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("planks", 2),
+						),
 					},
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("log", 1),
+						),
 					},
 				},
 				Inventory: map[string]uint{},
@@ -152,12 +196,16 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 5,
 				Recipes: map[string]internal.Recipe{
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"planks": 2},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("planks", 2),
+						),
 					},
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("log", 1),
+						),
 					},
 				},
 				Inventory: map[string]uint{
@@ -180,12 +228,16 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 4,
 				Recipes: map[string]internal.Recipe{
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"planks": 2},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("planks", 2),
+						),
 					},
 					"planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("log", 1),
+						),
 					},
 				},
 				Inventory: map[string]uint{
@@ -204,12 +256,16 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 4,
 				Recipes: map[string]internal.Recipe{
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"#planks": 2}, // Input uses tag
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("#planks", 2),
+						),
 					},
 					"oak-planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"oak-log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("oak-log", 1),
+						),
 					},
 				},
 				Tags: internal.Tags{
@@ -233,16 +289,22 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 4,
 				Recipes: map[string]internal.Recipe{
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"#planks": 2},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("#planks", 2),
+						),
 					},
 					"oak-planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"oak-log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("oak-log", 1),
+						),
 					},
 					"birch-planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"birch-log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("birch-log", 1),
+						),
 					},
 				},
 				Tags: internal.Tags{
@@ -264,16 +326,23 @@ func TestResolveBaseMaterials(t *testing.T) {
 				RequestedAmount: 4,
 				Recipes: map[string]internal.Recipe{
 					"stick": {
-						Yield:  4,
-						Inputs: map[string]uint{"#planks": 2},
+						Yield: 4,
+						// Inputs: map[string]uint{"#planks": 2},
+						Inputs: inputs(
+							ingredient("#planks", 2),
+						),
 					},
 					"oak-planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"oak-log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("oak-log", 1),
+						),
 					},
 					"birch-planks": {
-						Yield:  4,
-						Inputs: map[string]uint{"birch-log": 1},
+						Yield: 4,
+						Inputs: inputs(
+							ingredient("birch-log", 1),
+						),
 					},
 				},
 				Tags: internal.Tags{
@@ -297,5 +366,16 @@ func TestResolveBaseMaterials(t *testing.T) {
 				t.Errorf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func inputs(ingredient ...internal.Ingredient) []internal.Ingredient {
+	return ingredient
+}
+
+func ingredient(id string, count uint) internal.Ingredient {
+	return internal.Ingredient{
+		Options: []string{id},
+		Count:   count,
 	}
 }

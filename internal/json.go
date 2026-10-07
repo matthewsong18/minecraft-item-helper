@@ -2,11 +2,19 @@ package internal
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
 
-func ParseJsonRecipe(data []byte) (*Recipe, error) {
+type ParseJsonResponse struct {
+	Id     string
+	Recipe Recipe
+}
+
+var ErrUnsupportedRecipeType = errors.New("unsupported recipe type")
+
+func ParseJsonRecipe(data []byte) (*ParseJsonResponse, error) {
 	var router struct {
 		Type string `json:"type"`
 	}
@@ -23,11 +31,11 @@ func ParseJsonRecipe(data []byte) (*Recipe, error) {
 	case "minecraft:smelting":
 		return handleSmeltingRecipe(data)
 	default:
-		return nil, fmt.Errorf("unknown recipe type: %s", router.Type)
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedRecipeType, router.Type)
 	}
 }
 
-func handleShapelessRecipe(data []byte) (*Recipe, error) {
+func handleShapelessRecipe(data []byte) (*ParseJsonResponse, error) {
 	var dto struct {
 		Ingredients []string `json:"ingredients"`
 		Result      struct {
@@ -45,13 +53,16 @@ func handleShapelessRecipe(data []byte) (*Recipe, error) {
 		inputs[item] += 1
 	}
 
-	return &Recipe{
-		Yield:  dto.Result.Count,
-		Inputs: inputs,
+	return &ParseJsonResponse{
+		Id: dto.Result.Id,
+		Recipe: Recipe{
+			Yield:  dto.Result.Count,
+			Inputs: inputs,
+		},
 	}, nil
 }
 
-func handleShapedRecipe(data []byte) (*Recipe, error) {
+func handleShapedRecipe(data []byte) (*ParseJsonResponse, error) {
 	var dto struct {
 		Key     map[string]string `json:"key"`
 		Pattern []string          `json:"pattern"`
@@ -73,13 +84,16 @@ func handleShapedRecipe(data []byte) (*Recipe, error) {
 		}
 	}
 
-	return &Recipe{
-		Yield:  dto.Result.Count,
-		Inputs: inputs,
+	return &ParseJsonResponse{
+		Id: dto.Result.Id,
+		Recipe: Recipe{
+			Yield:  dto.Result.Count,
+			Inputs: inputs,
+		},
 	}, nil
 }
 
-func handleSmeltingRecipe(data []byte) (*Recipe, error) {
+func handleSmeltingRecipe(data []byte) (*ParseJsonResponse, error) {
 	var dto struct {
 		Ingredient string `json:"ingredient"`
 		Result     struct {
@@ -91,10 +105,13 @@ func handleSmeltingRecipe(data []byte) (*Recipe, error) {
 		return nil, err
 	}
 
-	return &Recipe{
-		Yield: 1,
-		Inputs: map[string]uint{
-			dto.Ingredient: 1,
+	return &ParseJsonResponse{
+		Id: dto.Result.Id,
+		Recipe: Recipe{
+			Yield: 1,
+			Inputs: map[string]uint{
+				dto.Ingredient: 1,
+			},
 		},
 	}, nil
 }

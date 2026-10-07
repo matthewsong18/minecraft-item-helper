@@ -11,7 +11,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 	tests := []struct {
 		name      string // description of this test case
 		jsonInput string
-		output    *internal.Recipe
+		output    *internal.ParseJsonResponse
 	}{
 		{
 			name: "Shapeless Recipe",
@@ -27,10 +27,13 @@ func Test_parseJsonRecipe(t *testing.T) {
 			    "id": "minecraft:oak_planks"
 			  }
 			}`,
-			output: &internal.Recipe{
-				Yield: 4,
-				Inputs: map[string]uint{
-					"#minecraft:oak_logs": 1,
+			output: &internal.ParseJsonResponse{
+				Id: "minecraft:oak_planks",
+				Recipe: internal.Recipe{
+					Yield: 4,
+					Inputs: map[string]uint{
+						"#minecraft:oak_logs": 1,
+					},
 				},
 			},
 		},
@@ -55,11 +58,14 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.Recipe{
-				Yield: 1,
-				Inputs: map[string]uint{
-					"minecraft:iron_block": 3,
-					"minecraft:iron_ingot": 4,
+			output: &internal.ParseJsonResponse{
+				Id: "minecraft:anvil",
+				Recipe: internal.Recipe{
+					Yield: 1,
+					Inputs: map[string]uint{
+						"minecraft:iron_block": 3,
+						"minecraft:iron_ingot": 4,
+					},
 				},
 			},
 		},
@@ -77,10 +83,13 @@ func Test_parseJsonRecipe(t *testing.T) {
 					}
 				}
 			`,
-			output: &internal.Recipe{
-				Yield: 1,
-				Inputs: map[string]uint{
-					"minecraft:potato": 1,
+			output: &internal.ParseJsonResponse{
+				Id: "minecraft:baked_potato",
+				Recipe: internal.Recipe{
+					Yield: 1,
+					Inputs: map[string]uint{
+						"minecraft:potato": 1,
+					},
 				},
 			},
 		},

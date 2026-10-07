@@ -197,6 +197,59 @@ func Test_parseJsonRecipe(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Smelting Recipe with array in ingredient",
+			jsonInput: `
+				{
+				  "type": "minecraft:smelting",
+				  "category": "misc",
+				  "cookingtime": 200,
+				  "experience": 0.1,
+				  "ingredient": [
+				    "minecraft:copper_pickaxe",
+				    "minecraft:copper_shovel",
+				    "minecraft:copper_axe",
+				    "minecraft:copper_hoe",
+				    "minecraft:copper_sword",
+				    "minecraft:copper_spear",
+				    "minecraft:copper_helmet",
+				    "minecraft:copper_chestplate",
+				    "minecraft:copper_leggings",
+				    "minecraft:copper_boots",
+				    "minecraft:copper_horse_armor",
+				    "minecraft:copper_nautilus_armor"
+				  ],
+				  "result": {
+				    "id": "minecraft:copper_nugget"
+				  }
+				}
+			`,
+			output: &internal.ParseJsonResponse{
+				Id: "minecraft:copper_nugget",
+				Recipe: internal.Recipe{
+					Yield: 1,
+					Inputs: []internal.Ingredient{
+						{
+							Options: []string{
+								"minecraft:copper_pickaxe",
+								"minecraft:copper_shovel",
+								"minecraft:copper_axe",
+								"minecraft:copper_hoe",
+								"minecraft:copper_sword",
+								"minecraft:copper_spear",
+								"minecraft:copper_helmet",
+								"minecraft:copper_chestplate",
+								"minecraft:copper_leggings",
+								"minecraft:copper_boots",
+								"minecraft:copper_horse_armor",
+								"minecraft:copper_nautilus_armor",
+							},
+							Count: 1,
+						},
+					},
+				},
+			},
+		},
 	}
 	lessIngredient := func(a, b internal.Ingredient) bool {
 		if len(a.Options) == 0 || len(b.Options) == 0 {

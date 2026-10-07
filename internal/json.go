@@ -148,7 +148,7 @@ func handleShapedRecipe(data []byte) (*ParseJsonResponse, error) {
 
 func handleSmeltingRecipe(data []byte) (*ParseJsonResponse, error) {
 	var dto struct {
-		Ingredient string `json:"ingredient"`
+		Ingredient RawIngredient `json:"ingredient"`
 		Result     struct {
 			Id string `json:"id"`
 		} `json:"result"`
@@ -164,7 +164,7 @@ func handleSmeltingRecipe(data []byte) (*ParseJsonResponse, error) {
 			Yield: 1,
 			Inputs: []Ingredient{
 				{
-					Options: []string{dto.Ingredient},
+					Options: dto.Ingredient,
 					Count:   1,
 				},
 			},

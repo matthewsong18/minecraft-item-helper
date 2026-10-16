@@ -89,6 +89,47 @@ func TestCLIRejectsConflictingRequestModes(t *testing.T) {
 	}
 }
 
+func TestCLIStopsAtLeatherByDefaultAndAllowsOverrides(t *testing.T) {
+	recipes, tags := cliAssets(t)
+	writeFile(t, filepath.Join(recipes, "leather.json"), `{
+		"type":"minecraft:crafting_shapeless", "ingredients":["minecraft:rabbit_hide","minecraft:rabbit_hide","minecraft:rabbit_hide","minecraft:rabbit_hide"],
+		"result":{"id":"minecraft:leather","count":1}
+	}`)
+	config := filepath.Join(t.TempDir(), "config.json")
+	writeFile(t, config, `{"stop_items":{"remove":["minecraft:leather"],"add":["minecraft:oak_planks"]}}`)
+	for _, tt := range []struct{ item, config, want string }{
+		{"minecraft:leather", "", "minecraft:leather: 1\n"},
+		{"minecraft:leather", config, "minecraft:rabbit_hide: 4\n"},
+		{"minecraft:oak_planks", config, "minecraft:oak_planks: 1\n"},
+	} {
+		var output strings.Builder
+		args := []string{"--item", tt.item, "--recipes", recipes, "--tags", tags}
+		if tt.config != "" {
+			args = append(args, "--config", tt.config)
+		}
+		if err := run(args, &output); err != nil {
+			t.Fatal(err)
+		}
+		if output.String() != tt.want {
+			t.Fatalf("output = %q, want %q", output.String(), tt.want)
+		}
+	}
+}
+
+func TestCLIUsesSavedTagPreferences(t *testing.T) {
+	recipes, tags := cliAssets(t)
+	writeFile(t, filepath.Join(tags, "logs.json"), `{"values":["minecraft:oak_log","minecraft:cherry_log"]}`)
+	config := filepath.Join(t.TempDir(), "config.json")
+	writeFile(t, config, `{"preferences":{"#minecraft:logs":["minecraft:cherry_log"]}}`)
+	var output strings.Builder
+	if err := run([]string{"--item", "minecraft:oak_planks", "--recipes", recipes, "--tags", tags, "--config", config}, &output); err != nil {
+		t.Fatal(err)
+	}
+	if output.String() != "minecraft:cherry_log: 1\n" {
+		t.Fatalf("unexpected output: %q", output.String())
+	}
+}
+
 func cliAssets(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()

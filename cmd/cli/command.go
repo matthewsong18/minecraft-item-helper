@@ -19,6 +19,7 @@ func run(args []string, output io.Writer) error {
 	inventoryPath := flags.String("inventory", "", "JSON object of owned item quantities")
 	requestsPath := flags.String("requests", "", "JSON object of requested item quantities")
 	showInventory := flags.Bool("show-inventory", false, "show projected inventory after crafting")
+	configPath := flags.String("config", "", "JSON settings for preferences and stop items")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -49,6 +50,10 @@ func run(args []string, output io.Writer) error {
 		}
 	}
 
+	config, err := loadSettings(*configPath)
+	if err != nil {
+		return err
+	}
 	recipes, err := loadRecipes(*recipesPath)
 	if err != nil {
 		return err
@@ -68,6 +73,7 @@ func run(args []string, output io.Writer) error {
 	response, err := internal.PlanBuild(internal.BuildRequest{
 		Items:   items,
 		Recipes: recipes, Tags: tags, Inventory: inventory,
+		StopItems: config.stopItems(), Preferences: config.Preferences,
 	})
 	if err != nil {
 		return err

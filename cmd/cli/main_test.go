@@ -57,6 +57,38 @@ func TestCLIUsesInventoryWithoutChangingFile(t *testing.T) {
 	}
 }
 
+func TestCLIPlansBuildListAndShowsProjectedInventory(t *testing.T) {
+	recipes, tags := cliAssets(t)
+	writeFile(t, filepath.Join(recipes, "stick.json"), `{
+		"type":"minecraft:crafting_shapeless", "ingredients":["minecraft:oak_planks","minecraft:oak_planks"],
+		"result":{"id":"minecraft:stick","count":4}
+	}`)
+	path := filepath.Join(t.TempDir(), "build.json")
+	writeFile(t, path, `{"minecraft:oak_planks":1,"minecraft:stick":4}`)
+	var output strings.Builder
+	err := run([]string{"--requests", path, "--recipes", recipes, "--tags", tags, "--show-inventory"}, &output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = "minecraft:oak_log: 1\n\nProjected inventory after crafting (requested items set aside):\nminecraft:oak_planks: 1\n"
+	if output.String() != want {
+		t.Fatalf("output = %q, want %q", output.String(), want)
+	}
+}
+
+func TestCLIRejectsConflictingRequestModes(t *testing.T) {
+	for _, args := range [][]string{
+		{"--item", "minecraft:oak_planks", "--requests", "build.json"},
+		{"--requests", "build.json", "--amount", "2"},
+	} {
+		var output strings.Builder
+		err := run(args, &output)
+		if err == nil || !strings.Contains(err.Error(), "cannot combine") {
+			t.Fatalf("expected conflicting flags error for %v, got %v", args, err)
+		}
+	}
+}
+
 func cliAssets(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()

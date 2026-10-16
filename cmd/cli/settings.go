@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"minecraft-item-helper/internal"
 	"strings"
 )
 
@@ -44,19 +45,8 @@ func loadSettings(path string) (settings, error) {
 }
 
 func (config settings) stopItems() map[string]bool {
-	items := make(map[string]bool)
-	for _, item := range []string{
-		"leather", "iron_ingot", "gold_ingot", "copper_ingot", "netherite_ingot",
-		"coal", "diamond", "emerald", "redstone", "lapis_lazuli",
-		"raw_iron", "raw_gold", "raw_copper", "wheat", "slime_ball",
-	} {
-		items["minecraft:"+item] = true
-	}
-	for _, item := range config.StopItems.Add {
-		items[item] = true
-	}
-	for _, item := range config.StopItems.Remove {
-		delete(items, item)
-	}
-	return items
+	return internal.StopItemsWithOverrides(
+		config.StopItems.Add,
+		config.StopItems.Remove,
+	)
 }

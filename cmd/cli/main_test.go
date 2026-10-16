@@ -161,6 +161,23 @@ func TestCLISelectsRecipeExplicitly(t *testing.T) {
 	}
 }
 
+func TestCLIBundledRecipesUseGatherableStopItems(t *testing.T) {
+	root := filepath.Join("..", "..", "assets")
+	for _, item := range []string{"coal", "diamond", "emerald", "redstone", "lapis_lazuli", "raw_iron", "raw_gold", "raw_copper", "wheat", "slime_ball"} {
+		t.Run(item, func(t *testing.T) {
+			var output strings.Builder
+			id := "minecraft:" + item
+			err := run([]string{"--item", id, "--recipes", filepath.Join(root, "recipes"), "--tags", filepath.Join(root, "item-tag-groups")}, &output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.String() != id+": 1\n" {
+				t.Fatalf("unexpected output: %q", output.String())
+			}
+		})
+	}
+}
+
 func cliAssets(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()

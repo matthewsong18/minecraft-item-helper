@@ -7,10 +7,14 @@ This repository is a Go module for resolving Minecraft crafting materials. Core 
 ## Build, Test, and Development Commands
 
 - `go test ./...` runs all Go tests with the standard toolchain.
-- `just test` runs the same package suite with `gotestsum --format short ./...`; install `gotestsum` to use this shortcut.
+- `just test` runs the suite with `gotestsum --format short ./...`; run it directly without extra cache arguments.
 - `just test-watch` reruns tests as files change and also requires `gotestsum`.
 - `go run ./cmd/cli --recipes assets/recipes/` runs the CLI against the bundled recipes. Use `--recipes <dir>` to point it at another directory.
 - `gofmt -w internal cmd` formats Go source files.
+
+## Agent Tooling
+
+Use the Jujutsu MCP for repository history and changes; do not run `jj` through the shell or change its configuration to work around a command error. When discovering MCP capabilities, inspect only the specific tool needed rather than dumping the full tool catalog.
 
 ## Coding Style & Naming Conventions
 

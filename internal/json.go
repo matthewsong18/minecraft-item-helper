@@ -43,13 +43,18 @@ type RawIngredient []string
 
 func (r *RawIngredient) UnmarshalJSON(data []byte) error {
 	var single string
-	if err := json.Unmarshal(data, &single); err == nil {
+	if err := json.Unmarshal(data, &single); err == nil && strings.TrimSpace(single) != "" {
 		*r = []string{single}
 		return nil
 	}
 
 	var multiple []string
-	if err := json.Unmarshal(data, &multiple); err == nil {
+	if err := json.Unmarshal(data, &multiple); err == nil && len(multiple) > 0 {
+		for _, option := range multiple {
+			if strings.TrimSpace(option) == "" {
+				return fmt.Errorf("ingredient option is empty")
+			}
+		}
 		*r = multiple
 		return nil
 	}
@@ -70,31 +75,9 @@ func handleShapelessRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 		return nil, err
 	}
 
-	groupedItems := make(map[string]Ingredient)
-	for _, raw := range dto.Ingredients {
-		if len(raw) > 1 {
-			// Just using raw[0] to get a key
-			groupedItems[raw[0]] = Ingredient{
-				Options: raw,
-				Count:   1,
-			}
-			continue
-		}
-
-		if existing, found := groupedItems[raw[0]]; found {
-			existing.Count++
-			groupedItems[raw[0]] = existing
-		} else {
-			groupedItems[raw[0]] = Ingredient{
-				Options: raw,
-				Count:   1,
-			}
-		}
-	}
-
-	var inputs []Ingredient
-	for _, ingredient := range groupedItems {
-		inputs = append(inputs, ingredient)
+	inputs, err := groupIngredients(dto.Ingredients)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ParseJsonRecipeResponse{
@@ -120,25 +103,22 @@ func handleShapedRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 		return nil, fmt.Errorf("failed to parse minecraft shaped recipe: %w", err)
 	}
 
-	itemCounts := make(map[string]Ingredient)
-	for key, raw := range dto.Key {
-		for _, line := range dto.Pattern {
-			count := uint(strings.Count(line, key))
-			if existing, found := itemCounts[raw[0]]; found {
-				existing.Count += count
-				itemCounts[raw[0]] = existing
-			} else {
-				itemCounts[raw[0]] = Ingredient{
-					Options: raw,
-					Count:   count,
-				}
+	var rawInputs []RawIngredient
+	for _, row := range dto.Pattern {
+		for _, symbol := range row {
+			if symbol == ' ' {
+				continue
 			}
+			raw, ok := dto.Key[string(symbol)]
+			if !ok {
+				return nil, fmt.Errorf("unknown shaped recipe symbol %q", symbol)
+			}
+			rawInputs = append(rawInputs, raw)
 		}
 	}
-
-	var inputs []Ingredient
-	for _, ingredient := range itemCounts {
-		inputs = append(inputs, ingredient)
+	inputs, err := groupIngredients(rawInputs)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ParseJsonRecipeResponse{
@@ -186,4 +166,23 @@ func ParseJsonTag(data []byte) (*ParseJsonTagResponse, error) {
 	}
 
 	return &ParseJsonTagResponse{Tag: dto.Values}, nil
+}
+
+// groupIngredients preserves first appearance, including the order of alternatives.
+func groupIngredients(raws []RawIngredient) ([]Ingredient, error) {
+	var inputs []Ingredient
+	indices := make(map[string]int)
+	for _, raw := range raws {
+		if len(raw) == 0 {
+			return nil, errors.New("ingredient has no options")
+		}
+		key, _ := json.Marshal(raw)
+		if index, ok := indices[string(key)]; ok {
+			inputs[index].Count++
+		} else {
+			indices[string(key)] = len(inputs)
+			inputs = append(inputs, Ingredient{Options: raw, Count: 1})
+		}
+	}
+	return inputs, nil
 }

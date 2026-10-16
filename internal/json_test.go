@@ -311,3 +311,23 @@ func TestParseJsonTag(t *testing.T) {
 		})
 	}
 }
+
+func TestParserPreservesIngredientOrderAndDistinctAlternatives(t *testing.T) {
+	for _, data := range []string{
+		`{"type":"minecraft:crafting_shapeless","ingredients":["z",["coal","charcoal"],["coal","charcoal"],["coal","coke"]],"result":{"id":"item","count":1}}`,
+		`{"type":"minecraft:crafting_shaped","key":{"Z":"z","A":["coal","charcoal"],"B":["coal","coke"]},"pattern":["ZA","AB"],"result":{"id":"item","count":1}}`,
+	} {
+		got, err := internal.ParseJsonRecipe([]byte(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []internal.Ingredient{
+			{Options: []string{"z"}, Count: 1},
+			{Options: []string{"coal", "charcoal"}, Count: 2},
+			{Options: []string{"coal", "coke"}, Count: 1},
+		}
+		if diff := cmp.Diff(want, got.Recipe.Inputs); diff != "" {
+			t.Fatalf("ingredient mismatch: %s", diff)
+		}
+	}
+}

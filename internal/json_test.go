@@ -12,7 +12,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 	tests := []struct {
 		name      string // description of this test case
 		jsonInput string
-		output    *internal.ParseJsonResponse
+		output    *internal.ParseJsonRecipeResponse
 	}{
 		{
 			name: "Shapeless Recipe",
@@ -28,7 +28,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 			    "id": "minecraft:oak_planks"
 			  }
 			}`,
-			output: &internal.ParseJsonResponse{
+			output: &internal.ParseJsonRecipeResponse{
 				Id: "minecraft:oak_planks",
 				Recipe: internal.Recipe{
 					Yield: 4,
@@ -59,7 +59,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonResponse{
+			output: &internal.ParseJsonRecipeResponse{
 				Id: "minecraft:anvil",
 				Recipe: internal.Recipe{
 					Yield: 1,
@@ -84,7 +84,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 					}
 				}
 			`,
-			output: &internal.ParseJsonResponse{
+			output: &internal.ParseJsonRecipeResponse{
 				Id: "minecraft:baked_potato",
 				Recipe: internal.Recipe{
 					Yield: 1,
@@ -127,7 +127,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonResponse{
+			output: &internal.ParseJsonRecipeResponse{
 				Id: "minecraft:red_bed",
 				Recipe: internal.Recipe{
 					Yield: 1,
@@ -180,7 +180,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonResponse{
+			output: &internal.ParseJsonRecipeResponse{
 				Id: "minecraft:torch",
 				Recipe: internal.Recipe{
 					Yield: 4,
@@ -224,7 +224,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonResponse{
+			output: &internal.ParseJsonRecipeResponse{
 				Id: "minecraft:copper_nugget",
 				Recipe: internal.Recipe{
 					Yield: 1,
@@ -271,6 +271,42 @@ func Test_parseJsonRecipe(t *testing.T) {
 			)
 			if diff != "" {
 				t.Errorf("ParseJsonRecipe() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestParseJsonTag(t *testing.T) {
+	tests := []struct {
+		name string // description of this test case
+		// Named input parameters for target function.
+		data    []byte
+		want    *internal.ParseJsonTagResponse
+		wantErr bool
+	}{
+		{
+			name: "parses tag values",
+			data: []byte(`{"values":["minecraft:coal","minecraft:charcoal"]}`),
+			want: &internal.ParseJsonTagResponse{
+				Tag: []string{"minecraft:coal", "minecraft:charcoal"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, gotErr := internal.ParseJsonTag(tt.data)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("ParseJsonTag() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("ParseJsonTag() succeeded unexpectedly")
+			}
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("ParseJsonTag() = %v, want %v", got, tt.want)
+				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}

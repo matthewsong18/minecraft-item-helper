@@ -7,14 +7,18 @@ import (
 	"strings"
 )
 
-type ParseJsonResponse struct {
+type ParseJsonRecipeResponse struct {
 	Id     string
 	Recipe Recipe
 }
 
+type ParseJsonTagResponse struct {
+	Tag []string
+}
+
 var ErrUnsupportedRecipeType = errors.New("unsupported recipe type")
 
-func ParseJsonRecipe(data []byte) (*ParseJsonResponse, error) {
+func ParseJsonRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 	var router struct {
 		Type string `json:"type"`
 	}
@@ -53,7 +57,7 @@ func (r *RawIngredient) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("invalid ingredient format: %s", string(data))
 }
 
-func handleShapelessRecipe(data []byte) (*ParseJsonResponse, error) {
+func handleShapelessRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 	var dto struct {
 		Ingredients []RawIngredient `json:"ingredients"`
 		Result      struct {
@@ -93,7 +97,7 @@ func handleShapelessRecipe(data []byte) (*ParseJsonResponse, error) {
 		inputs = append(inputs, ingredient)
 	}
 
-	return &ParseJsonResponse{
+	return &ParseJsonRecipeResponse{
 		Id: dto.Result.Id,
 		Recipe: Recipe{
 			Yield:  dto.Result.Count,
@@ -102,7 +106,7 @@ func handleShapelessRecipe(data []byte) (*ParseJsonResponse, error) {
 	}, nil
 }
 
-func handleShapedRecipe(data []byte) (*ParseJsonResponse, error) {
+func handleShapedRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 	var dto struct {
 		Key     map[string]RawIngredient `json:"key"`
 		Pattern []string                 `json:"pattern"`
@@ -137,7 +141,7 @@ func handleShapedRecipe(data []byte) (*ParseJsonResponse, error) {
 		inputs = append(inputs, ingredient)
 	}
 
-	return &ParseJsonResponse{
+	return &ParseJsonRecipeResponse{
 		Id: dto.Result.Id,
 		Recipe: Recipe{
 			Yield:  dto.Result.Count,
@@ -146,7 +150,7 @@ func handleShapedRecipe(data []byte) (*ParseJsonResponse, error) {
 	}, nil
 }
 
-func handleSmeltingRecipe(data []byte) (*ParseJsonResponse, error) {
+func handleSmeltingRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 	var dto struct {
 		Ingredient RawIngredient `json:"ingredient"`
 		Result     struct {
@@ -158,7 +162,7 @@ func handleSmeltingRecipe(data []byte) (*ParseJsonResponse, error) {
 		return nil, err
 	}
 
-	return &ParseJsonResponse{
+	return &ParseJsonRecipeResponse{
 		Id: dto.Result.Id,
 		Recipe: Recipe{
 			Yield: 1,
@@ -170,4 +174,16 @@ func handleSmeltingRecipe(data []byte) (*ParseJsonResponse, error) {
 			},
 		},
 	}, nil
+}
+
+func ParseJsonTag(data []byte) (*ParseJsonTagResponse, error) {
+	var dto struct {
+		Values []string `json:"values"`
+	}
+
+	if err := json.Unmarshal(data, &dto); err != nil {
+		return nil, fmt.Errorf("failed to parse tag values: %w", err)
+	}
+
+	return &ParseJsonTagResponse{Tag: dto.Values}, nil
 }

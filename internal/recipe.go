@@ -26,6 +26,7 @@ type Request struct {
 	Recipes         map[string]Recipe
 	Tags            Tags
 	Inventory       Inventory
+	StopItems       map[string]bool
 }
 
 type Response struct {
@@ -86,7 +87,7 @@ func ResolveBaseMaterials(req Request) Response {
 	}
 
 	recipe, hasRecipe := recipes[requestedItem]
-	if !hasRecipe {
+	if !hasRecipe || req.StopItems[requestedItem] {
 		response.FlatMap[requestedItem] += requestedAmount
 		return response
 	}
@@ -110,6 +111,7 @@ func ResolveBaseMaterials(req Request) Response {
 			Recipes:         recipes,
 			Tags:            tags,
 			Inventory:       currentInventory,
+			StopItems:       req.StopItems,
 		})
 
 		appendMaps(response.FlatMap, subResult.FlatMap)

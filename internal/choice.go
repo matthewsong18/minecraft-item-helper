@@ -3,6 +3,7 @@ package internal
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 )
@@ -24,8 +25,23 @@ func chooseIngredient(options []string, req Request) (string, error) {
 	}
 
 	var preferred []string
+	hasTag := false
 	for _, option := range options {
 		preferred = append(preferred, req.Preferences[option]...)
+		hasTag = hasTag || strings.HasPrefix(option, "#")
+	}
+	// Some recipes spell out alternatives instead of referencing their shared tag.
+	// Apply that tag's preference only when it covers every available candidate.
+	if !hasTag && len(options) > 1 {
+		for _, tag := range slices.Sorted(maps.Keys(req.Preferences)) {
+			members, err := expandOptions([]string{tag}, req.Tags, nil)
+			if err != nil {
+				continue
+			}
+			if !slices.ContainsFunc(candidates, func(item string) bool { return !slices.Contains(members, item) }) {
+				preferred = append(preferred, req.Preferences[tag]...)
+			}
+		}
 	}
 	rank := func(item string) int {
 		if index := slices.Index(preferred, item); index >= 0 {

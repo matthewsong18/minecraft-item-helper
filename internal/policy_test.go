@@ -119,3 +119,20 @@ func TestAlternativeIngredientUsesInventory(t *testing.T) {
 		t.Fatalf("unexpected shopping list: %v", got.FlatMap)
 	}
 }
+
+func TestAlternativeIngredientUsesApplicableTagPreferences(t *testing.T) {
+	got, err := internal.ResolveBaseMaterials(internal.Request{
+		RequestedItem: "torch", RequestedAmount: 1,
+		Recipes: map[string]internal.Recipe{
+			"torch": {Yield: 1, Inputs: []internal.Ingredient{{Options: []string{"coal", "charcoal"}, Count: 1}}},
+		},
+		Tags:        internal.Tags{"#coals": {"coal", "charcoal"}},
+		Preferences: map[string][]string{"#coals": {"charcoal"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(map[string]uint{"charcoal": 1}, got.FlatMap); diff != "" {
+		t.Fatal(diff)
+	}
+}

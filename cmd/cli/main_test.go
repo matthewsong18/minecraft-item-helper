@@ -178,6 +178,52 @@ func TestCLIBundledRecipesUseGatherableStopItems(t *testing.T) {
 	}
 }
 
+func TestCLIBuildMaterialWinsOverStockAndSavedPreference(t *testing.T) {
+	recipes, tags := cliAssets(t)
+	writeFile(t, filepath.Join(recipes, "crafting_table.json"), `{
+		"type":"minecraft:crafting_shaped","key":{"P":"#minecraft:planks"},"pattern":["PP","PP"],
+		"result":{"id":"minecraft:crafting_table","count":1}
+	}`)
+	writeFile(t, filepath.Join(tags, "planks.json"), `{"values":["minecraft:cherry_planks","minecraft:oak_planks"]}`)
+	root := t.TempDir()
+	build := filepath.Join(root, "build.json")
+	stock := filepath.Join(root, "inventory.json")
+	config := filepath.Join(root, "config.json")
+	writeFile(t, build, `{"minecraft:crafting_table":1,"minecraft:oak_planks":1}`)
+	writeFile(t, stock, `{"minecraft:cherry_planks":64,"minecraft:oak_log":1}`)
+	writeFile(t, config, `{"preferences":{"#minecraft:planks":["minecraft:cherry_planks"]}}`)
+	var output strings.Builder
+	err := run([]string{"--requests", build, "--inventory", stock, "--config", config,
+		"--recipes", recipes, "--tags", tags, "--show-inventory"}, &output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = "minecraft:oak_log: 1\n\nProjected inventory after crafting (requested items set aside):\nminecraft:cherry_planks: 64\nminecraft:oak_planks: 3\n"
+	if output.String() != want {
+		t.Fatalf("output = %q, want %q", output.String(), want)
+	}
+}
+
+func TestCLIBundledLecternAndTorchShoppingLists(t *testing.T) {
+	root := filepath.Join("..", "..", "assets")
+	for _, tt := range []struct{ item, amount, want string }{
+		{"minecraft:lectern", "1", "minecraft:leather: 3\nminecraft:oak_log: 3\nminecraft:sugar_cane: 9\n"},
+		{"minecraft:torch", "16", "minecraft:coal: 4\nminecraft:oak_log: 1\n"},
+	} {
+		t.Run(tt.item, func(t *testing.T) {
+			var output strings.Builder
+			err := run([]string{"--item", tt.item, "--amount", tt.amount,
+				"--recipes", filepath.Join(root, "recipes"), "--tags", filepath.Join(root, "item-tag-groups")}, &output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.String() != tt.want {
+				t.Fatalf("output = %q, want %q", output.String(), tt.want)
+			}
+		})
+	}
+}
+
 func cliAssets(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()

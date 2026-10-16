@@ -54,7 +54,7 @@ func run(args []string, output io.Writer) error {
 	if err != nil {
 		return err
 	}
-	recipes, err := loadRecipes(*recipesPath)
+	recipes, err := loadRecipes(*recipesPath, config.RecipeChoices)
 	if err != nil {
 		return err
 	}

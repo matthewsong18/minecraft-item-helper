@@ -130,6 +130,37 @@ func TestCLIUsesSavedTagPreferences(t *testing.T) {
 	}
 }
 
+func TestCLISelectsRecipeExplicitly(t *testing.T) {
+	recipes, tags := cliAssets(t)
+	writeFile(t, filepath.Join(recipes, "zz_bamboo_route.json"), `{
+		"type":"minecraft:crafting_shapeless", "ingredients":["minecraft:bamboo"],
+		"result":{"id":"minecraft:oak_planks","count":2}
+	}`)
+	config := filepath.Join(t.TempDir(), "config.json")
+	writeFile(t, config, `{"recipe_choices":{"minecraft:oak_planks":"zz_bamboo_route"}}`)
+	for _, tt := range []struct{ config, want string }{
+		{"", "minecraft:oak_log: 1\n"}, {config, "minecraft:bamboo: 1\n"},
+	} {
+		var output strings.Builder
+		args := []string{"--item", "minecraft:oak_planks", "--recipes", recipes, "--tags", tags}
+		if tt.config != "" {
+			args = append(args, "--config", tt.config)
+		}
+		if err := run(args, &output); err != nil {
+			t.Fatal(err)
+		}
+		if output.String() != tt.want {
+			t.Fatalf("output = %q, want %q", output.String(), tt.want)
+		}
+	}
+	writeFile(t, config, `{"recipe_choices":{"minecraft:oak_planks":"missing_recipe"}}`)
+	var output strings.Builder
+	err := run([]string{"--item", "minecraft:oak_planks", "--recipes", recipes, "--tags", tags, "--config", config}, &output)
+	if err == nil || !strings.Contains(err.Error(), "missing_recipe") {
+		t.Fatalf("expected invalid recipe choice, got %v", err)
+	}
+}
+
 func cliAssets(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()

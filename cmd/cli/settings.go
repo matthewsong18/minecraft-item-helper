@@ -6,8 +6,9 @@ import (
 )
 
 type settings struct {
-	Preferences map[string][]string `json:"preferences"`
-	StopItems   struct {
+	RecipeChoices map[string]string   `json:"recipe_choices"`
+	Preferences   map[string][]string `json:"preferences"`
+	StopItems     struct {
 		Add    []string `json:"add"`
 		Remove []string `json:"remove"`
 	} `json:"stop_items"`

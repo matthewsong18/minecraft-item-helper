@@ -1,0 +1,14 @@
+{
+  "preferences": {
+    "#minecraft:planks": ["minecraft:cherry_planks", "minecraft:oak_planks"],
+    "#minecraft:wooden_slabs": ["minecraft:cherry_slab"],
+    "#minecraft:cherry_logs": ["minecraft:cherry_log"]
+  },
+  "stop_items": {
+    "add": ["minecraft:quartz"],
+    "remove": ["minecraft:iron_ingot"]
+  },
+  "recipe_choices": {
+    "minecraft:iron_ingot": "iron_ingot_from_smelting_raw_iron"
+  }
+}

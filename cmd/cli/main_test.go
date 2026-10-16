@@ -224,6 +224,33 @@ func TestCLIBundledLecternAndTorchShoppingLists(t *testing.T) {
 	}
 }
 
+func TestCLIDocumentedExamples(t *testing.T) {
+	root := filepath.Join("..", "..")
+	common := []string{"--recipes", filepath.Join(root, "assets", "recipes"),
+		"--tags", filepath.Join(root, "assets", "item-tag-groups"), "--config", filepath.Join(root, "examples", "config.json")}
+	for _, tt := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"build", []string{"--requests", filepath.Join(root, "examples", "build.json"),
+			"--inventory", filepath.Join(root, "examples", "inventory.json"), "--show-inventory"},
+			"minecraft:oak_log: 1\n\nProjected inventory after crafting (requested items set aside):\nminecraft:cherry_planks: 64\nminecraft:oak_planks: 3\n"},
+		{"smelting override", []string{"--item", "minecraft:iron_ingot", "--amount", "9"}, "minecraft:raw_iron: 9\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var output strings.Builder
+			args := append(append([]string{}, common...), tt.args...)
+			if err := run(args, &output); err != nil {
+				t.Fatal(err)
+			}
+			if output.String() != tt.want {
+				t.Fatalf("output = %q, want %q", output.String(), tt.want)
+			}
+		})
+	}
+}
+
 func cliAssets(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()

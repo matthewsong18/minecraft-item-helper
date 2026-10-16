@@ -360,7 +360,10 @@ func TestResolveBaseMaterials(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := internal.ResolveBaseMaterials(tt.inputs)
+			got, err := internal.ResolveBaseMaterials(tt.inputs)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("ResolveBaseMaterials() mismatch (-want +got):\n%s", diff)

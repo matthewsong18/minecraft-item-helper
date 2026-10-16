@@ -1,8 +1,10 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 )
 
@@ -34,7 +36,13 @@ type Response struct {
 	Inventory map[string]uint
 }
 
-func ResolveBaseMaterials(req Request) Response {
+var ErrRecipeCycle = errors.New("recipe cycle")
+
+func ResolveBaseMaterials(req Request) (Response, error) {
+	return resolve(req, nil)
+}
+
+func resolve(req Request, path []string) (Response, error) {
 	response := Response{
 		FlatMap:   map[string]uint{},
 		Inventory: nil,
@@ -83,44 +91,56 @@ func ResolveBaseMaterials(req Request) Response {
 	}
 
 	if requestedAmount == 0 {
-		return response
+		return response, nil
 	}
 
 	recipe, hasRecipe := recipes[requestedItem]
 	if !hasRecipe || req.StopItems[requestedItem] {
 		response.FlatMap[requestedItem] += requestedAmount
-		return response
+		return response, nil
 	}
+	if slices.Contains(path, requestedItem) {
+		return Response{}, fmt.Errorf("%w: %s", ErrRecipeCycle, strings.Join(append(path, requestedItem), " -> "))
+	}
+	if recipe.Yield == 0 {
+		return Response{}, fmt.Errorf("recipe for %s has zero yield", requestedItem)
+	}
+	path = append(path, requestedItem)
 
 	multiplier := getRecipeMultiplier(requestedAmount, recipe.Yield)
 
 	totalProduced := multiplier * recipe.Yield
 	leftover := totalProduced - requestedAmount
 
-	if leftover > 0 && hasInventory {
-		response.Inventory[requestedItem] += leftover
-	}
-
 	currentInventory := response.Inventory
 
 	for _, ingredient := range recipe.Inputs {
 		totalNeeded := multiplier * ingredient.Count
-		subResult := ResolveBaseMaterials(Request{
+		if len(ingredient.Options) == 0 {
+			return Response{}, fmt.Errorf("recipe for %s has an ingredient without options", requestedItem)
+		}
+		subResult, err := resolve(Request{
 			RequestedItem:   ingredient.Options[0],
 			RequestedAmount: totalNeeded,
 			Recipes:         recipes,
 			Tags:            tags,
 			Inventory:       currentInventory,
 			StopItems:       req.StopItems,
-		})
+		}, path)
+		if err != nil {
+			return Response{}, err
+		}
 
 		appendMaps(response.FlatMap, subResult.FlatMap)
 		currentInventory = subResult.Inventory
 	}
 
 	response.Inventory = currentInventory
+	if leftover > 0 && hasInventory {
+		response.Inventory[requestedItem] += leftover
+	}
 
-	return response
+	return response, nil
 }
 
 func appendMaps(destMap map[string]uint, srcMap map[string]uint) {

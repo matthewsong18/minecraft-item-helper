@@ -38,12 +38,15 @@ func run(args []string, output io.Writer) error {
 		return err
 	}
 
-	response := internal.ResolveBaseMaterials(internal.Request{
+	response, err := internal.ResolveBaseMaterials(internal.Request{
 		RequestedItem:   *item,
 		RequestedAmount: *amount,
 		Recipes:         recipes,
 		Tags:            tags,
 	})
+	if err != nil {
+		return err
+	}
 	return writeMaterials(output, response.FlatMap)
 }
 

@@ -27,6 +27,8 @@ type Request struct {
 	RequestedAmount uint
 	Recipes         map[string]Recipe
 	Tags            Tags
+	Preferences     map[string][]string
+	BuildItems      map[string]uint
 	Inventory       Inventory
 	StopItems       map[string]bool
 }
@@ -49,40 +51,16 @@ func resolve(req Request, path []string) (Response, error) {
 	}
 
 	recipes := req.Recipes
-	tags := req.Tags
 	requestedItem := req.RequestedItem
 	requestedAmount := req.RequestedAmount
 
 	hasInventory := req.Inventory != nil
 
-	isTag := strings.HasPrefix(requestedItem, "#")
-	if isTag {
-		requestedTag := requestedItem
-		for tag, items := range tags {
-			if tag == requestedTag {
-				requestedItem = items[0]
-
-				if !hasInventory {
-					break
-				}
-
-				var bestItem string
-				var bestItemAmount uint
-				for _, item := range items {
-					amount, err := req.Inventory.findAmountOf(item)
-
-					if err == nil && amount > bestItemAmount {
-						bestItemAmount = amount
-						bestItem = item
-					}
-				}
-
-				if bestItemAmount != 0 {
-					requestedItem = bestItem
-				}
-
-				break
-			}
+	if strings.HasPrefix(requestedItem, "#") {
+		var err error
+		requestedItem, err = chooseIngredient([]string{requestedItem}, req)
+		if err != nil {
+			return Response{}, err
 		}
 	}
 
@@ -119,11 +97,17 @@ func resolve(req Request, path []string) (Response, error) {
 		if len(ingredient.Options) == 0 {
 			return Response{}, fmt.Errorf("recipe for %s has an ingredient without options", requestedItem)
 		}
+		item, err := chooseIngredient(ingredient.Options, reqWithInventory(req, currentInventory))
+		if err != nil {
+			return Response{}, err
+		}
 		subResult, err := resolve(Request{
-			RequestedItem:   ingredient.Options[0],
+			RequestedItem:   item,
 			RequestedAmount: totalNeeded,
 			Recipes:         recipes,
-			Tags:            tags,
+			Tags:            req.Tags,
+			Preferences:     req.Preferences,
+			BuildItems:      req.BuildItems,
 			Inventory:       currentInventory,
 			StopItems:       req.StopItems,
 		}, path)
@@ -173,12 +157,4 @@ func grabItemFromInventory(inventory Inventory, requestedItem string, requestedA
 	}
 
 	return returnInventory, 0
-}
-
-func (i Inventory) findAmountOf(requestedItem string) (uint, error) {
-	if amountOwned, foundItem := i[requestedItem]; foundItem {
-		return amountOwned, nil
-	}
-
-	return 0, fmt.Errorf("Inventory does not contain %v", requestedItem)
 }

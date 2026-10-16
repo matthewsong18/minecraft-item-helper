@@ -16,6 +16,7 @@ func run(args []string, output io.Writer) error {
 	amount := flags.Uint("amount", 1, "number of items requested")
 	recipesPath := flags.String("recipes", "assets/recipes", "directory containing recipe JSON files")
 	tagsPath := flags.String("tags", "assets/item-tag-groups", "directory containing item tag JSON files")
+	inventoryPath := flags.String("inventory", "", "JSON object of owned item quantities")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -38,11 +39,16 @@ func run(args []string, output io.Writer) error {
 		return err
 	}
 
-	response, err := internal.ResolveBaseMaterials(internal.Request{
-		RequestedItem:   *item,
-		RequestedAmount: *amount,
-		Recipes:         recipes,
-		Tags:            tags,
+	var inventory internal.Inventory
+	if *inventoryPath != "" {
+		inventory, err = loadQuantities(*inventoryPath)
+		if err != nil {
+			return err
+		}
+	}
+	response, err := internal.PlanBuild(internal.BuildRequest{
+		Items:   map[string]uint{*item: *amount},
+		Recipes: recipes, Tags: tags, Inventory: inventory,
 	})
 	if err != nil {
 		return err

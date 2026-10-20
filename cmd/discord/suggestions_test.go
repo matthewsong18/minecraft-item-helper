@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"minecraft-item-helper/internal/planner"
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -13,8 +13,8 @@ func TestSuggestionsIncludeRecipeInputsAndNestedTagsWithCanonicalValues(t *testi
 	tags := planner.Tags{"#minecraft:logs": {"#minecraft:overworld_logs"}, "#minecraft:overworld_logs": {"minecraft:oak_log", "minecraft:birch_log"}}
 	got := suggestions(recipes, tags, "oak")
 	want := []itemSuggestion{{Name: "Oak Log (minecraft:oak_log)", Value: "minecraft:oak_log"}, {Name: "Oak Planks (minecraft:oak_planks)", Value: "minecraft:oak_planks"}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("got %#v, want %#v", got, want)
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Fatalf("suggestions differ (-want +got):\n%s", diff)
 	}
 }
 func TestSuggestionsAreDeterministicAndLimitedToDiscordMaximum(t *testing.T) {
@@ -24,8 +24,11 @@ func TestSuggestionsAreDeterministicAndLimitedToDiscordMaximum(t *testing.T) {
 	}
 	first := suggestions(recipes, nil, "")
 	second := suggestions(recipes, nil, "")
-	if len(first) != 25 || !reflect.DeepEqual(first, second) {
-		t.Fatalf("suggestions not capped and stable: %d", len(first))
+	if len(first) != 25 {
+		t.Fatalf("suggestions not capped: %d", len(first))
+	}
+	if diff := cmp.Diff(first, second); diff != "" {
+		t.Fatalf("suggestions are unstable (-first +second):\n%s", diff)
 	}
 	if got := suggestions(recipes, nil, "not-found"); len(got) != 0 {
 		t.Fatalf("expected no suggestions, got %#v", got)

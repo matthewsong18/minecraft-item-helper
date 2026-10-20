@@ -31,3 +31,20 @@ Recent commits use short Conventional Commit subjects such as `feat: add cli`, `
 ## Data and Configuration
 
 Treat files in `assets/` as runtime inputs: preserve valid JSON and Minecraft namespaced identifiers. Keep local environment configuration in the existing `devenv.nix`, `devenv.yaml`, and `justfile` conventions; do not commit machine-specific paths or generated output.
+
+## Agent skills
+
+### Issue tracker
+
+Track specs and tickets in GitHub Issues. Before tracker operations,
+read `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five canonical triage labels. Before assigning a triage state,
+read `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context glossary and ADR layout. Before codebase exploration,
+read `docs/agents/domain.md`.

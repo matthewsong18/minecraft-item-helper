@@ -1,12 +1,12 @@
-package main
+package datafiles
 
 import (
 	"fmt"
-	"minecraft-item-helper/internal"
+	"minecraft-item-helper/internal/planner"
 	"strings"
 )
 
-type settings struct {
+type Settings struct {
 	RecipeChoices map[string]string   `json:"recipe_choices"`
 	Preferences   map[string][]string `json:"preferences"`
 	StopItems     struct {
@@ -15,37 +15,37 @@ type settings struct {
 	} `json:"stop_items"`
 }
 
-func loadSettings(path string) (settings, error) {
+func LoadSettings(path string) (Settings, error) {
 	if path == "" {
-		return settings{}, nil
+		return Settings{}, nil
 	}
-	var config *settings
+	var config *Settings
 	if err := readJSON(path, &config); err != nil {
-		return settings{}, err
+		return Settings{}, err
 	}
 	if config == nil {
-		return settings{}, fmt.Errorf("%q must contain a settings object", path)
+		return Settings{}, fmt.Errorf("%q must contain a settings object", path)
 	}
 	for tag, items := range config.Preferences {
 		if !strings.HasPrefix(tag, "#") {
-			return settings{}, fmt.Errorf("preference key %q must be a tag beginning with #", tag)
+			return Settings{}, fmt.Errorf("preference key %q must be a tag beginning with #", tag)
 		}
 		for _, item := range items {
 			if strings.TrimSpace(item) == "" || strings.HasPrefix(item, "#") {
-				return settings{}, fmt.Errorf("preference for %s must name concrete items", tag)
+				return Settings{}, fmt.Errorf("preference for %s must name concrete items", tag)
 			}
 		}
 	}
 	for _, item := range append(append([]string{}, config.StopItems.Add...), config.StopItems.Remove...) {
 		if strings.TrimSpace(item) == "" || strings.HasPrefix(item, "#") {
-			return settings{}, fmt.Errorf("stop item %q must be a concrete item", item)
+			return Settings{}, fmt.Errorf("stop item %q must be a concrete item", item)
 		}
 	}
 	return *config, nil
 }
 
-func (config settings) stopItems() map[string]bool {
-	return internal.StopItemsWithOverrides(
+func (config Settings) StopItemSet() map[string]bool {
+	return planner.StopItemsWithOverrides(
 		config.StopItems.Add,
 		config.StopItems.Remove,
 	)

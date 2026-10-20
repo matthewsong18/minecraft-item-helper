@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository is a Go module for resolving Minecraft crafting materials. Core recipe models and parsing/resolution logic live in `internal/`; the command-line entry point is `cmd/cli/main.go`. Input data is stored under `assets/recipes/` and `assets/item-tag-groups/` as JSON. Tests sit beside the package code in `internal/*_test.go`. Keep new parsing and domain logic in `internal`, and keep CLI argument and file handling in `cmd/cli`.
+This repository is a Go module for resolving Minecraft crafting materials. Material-planning rules live in `internal/planner/`. Reading recipe, tag, settings, and inventory files lives in `internal/datafiles/`. The command-line entry point and printed output live in `cmd/cli/`. Input data is stored under `assets/recipes/` and `assets/item-tag-groups/` as JSON. Tests sit beside the package code. When adding code, place it beside the existing code with the same job.
 
 ## Build, Test, and Development Commands
 
@@ -22,7 +22,7 @@ Use standard Go formatting (`gofmt`), tabs for indentation, and idiomatic export
 
 ## Testing Guidelines
 
-Tests use Go's built-in `testing` package, with `github.com/google/go-cmp/cmp` for comparisons. Add or update tests in the relevant `internal/*_test.go` file; name test functions `Test<Behavior>`. Cover supported recipe formats, malformed or unsupported JSON, and material resolution edge cases. Run `go test ./...` before submitting changes.
+Tests use Go's built-in `testing` package, with `github.com/google/go-cmp/cmp` for comparisons. Add or update tests beside the package code they cover; name test functions `Test<Behavior>`. Cover supported recipe formats, malformed or unsupported JSON, and material resolution edge cases. Run `go test ./...` before submitting changes.
 
 ## Commit & Pull Request Guidelines
 

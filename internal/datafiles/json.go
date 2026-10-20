@@ -1,15 +1,17 @@
-package internal
+package datafiles
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+
+	"minecraft-item-helper/internal/planner"
 )
 
 type ParseJsonRecipeResponse struct {
 	Id     string
-	Recipe Recipe
+	Recipe planner.Recipe
 }
 
 type ParseJsonTagResponse struct {
@@ -82,7 +84,7 @@ func handleShapelessRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 
 	return &ParseJsonRecipeResponse{
 		Id: dto.Result.Id,
-		Recipe: Recipe{
+		Recipe: planner.Recipe{
 			Yield:  dto.Result.Count,
 			Inputs: inputs,
 		},
@@ -123,7 +125,7 @@ func handleShapedRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 
 	return &ParseJsonRecipeResponse{
 		Id: dto.Result.Id,
-		Recipe: Recipe{
+		Recipe: planner.Recipe{
 			Yield:  dto.Result.Count,
 			Inputs: inputs,
 		},
@@ -144,9 +146,9 @@ func handleSmeltingRecipe(data []byte) (*ParseJsonRecipeResponse, error) {
 
 	return &ParseJsonRecipeResponse{
 		Id: dto.Result.Id,
-		Recipe: Recipe{
+		Recipe: planner.Recipe{
 			Yield: 1,
-			Inputs: []Ingredient{
+			Inputs: []planner.Ingredient{
 				{
 					Options: dto.Ingredient,
 					Count:   1,
@@ -169,8 +171,8 @@ func ParseJsonTag(data []byte) (*ParseJsonTagResponse, error) {
 }
 
 // groupIngredients preserves first appearance, including the order of alternatives.
-func groupIngredients(raws []RawIngredient) ([]Ingredient, error) {
-	var inputs []Ingredient
+func groupIngredients(raws []RawIngredient) ([]planner.Ingredient, error) {
+	var inputs []planner.Ingredient
 	indices := make(map[string]int)
 	for _, raw := range raws {
 		if len(raw) == 0 {
@@ -181,7 +183,7 @@ func groupIngredients(raws []RawIngredient) ([]Ingredient, error) {
 			inputs[index].Count++
 		} else {
 			indices[string(key)] = len(inputs)
-			inputs = append(inputs, Ingredient{Options: raw, Count: 1})
+			inputs = append(inputs, planner.Ingredient{Options: raw, Count: 1})
 		}
 	}
 	return inputs, nil

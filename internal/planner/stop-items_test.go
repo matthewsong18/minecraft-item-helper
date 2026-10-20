@@ -1,7 +1,7 @@
-package internal_test
+package planner_test
 
 import (
-	"minecraft-item-helper/internal"
+	"minecraft-item-helper/internal/planner"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -84,7 +84,7 @@ func TestStopItemsWithOverrides(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := internal.StopItemsWithOverrides(tt.add, tt.remove)
+			got := planner.StopItemsWithOverrides(tt.add, tt.remove)
 			if diff := cmp.Diff(tt.want, got); diff != "" {
 				t.Errorf("StopItemsWithOverrides() mismatch (-want +got):\n%s", diff)
 			}

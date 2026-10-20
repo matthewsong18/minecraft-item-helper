@@ -1,7 +1,8 @@
-package internal_test
+package datafiles_test
 
 import (
-	"minecraft-item-helper/internal"
+	"minecraft-item-helper/internal/datafiles"
+	"minecraft-item-helper/internal/planner"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -12,7 +13,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 	tests := []struct {
 		name      string // description of this test case
 		jsonInput string
-		output    *internal.ParseJsonRecipeResponse
+		output    *datafiles.ParseJsonRecipeResponse
 	}{
 		{
 			name: "Shapeless Recipe",
@@ -28,9 +29,9 @@ func Test_parseJsonRecipe(t *testing.T) {
 			    "id": "minecraft:oak_planks"
 			  }
 			}`,
-			output: &internal.ParseJsonRecipeResponse{
+			output: &datafiles.ParseJsonRecipeResponse{
 				Id: "minecraft:oak_planks",
-				Recipe: internal.Recipe{
+				Recipe: planner.Recipe{
 					Yield: 4,
 					Inputs: inputs(
 						ingredient("#minecraft:oak_logs", 1),
@@ -59,9 +60,9 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonRecipeResponse{
+			output: &datafiles.ParseJsonRecipeResponse{
 				Id: "minecraft:anvil",
-				Recipe: internal.Recipe{
+				Recipe: planner.Recipe{
 					Yield: 1,
 					Inputs: inputs(
 						ingredient("minecraft:iron_block", 3),
@@ -84,9 +85,9 @@ func Test_parseJsonRecipe(t *testing.T) {
 					}
 				}
 			`,
-			output: &internal.ParseJsonRecipeResponse{
+			output: &datafiles.ParseJsonRecipeResponse{
 				Id: "minecraft:baked_potato",
-				Recipe: internal.Recipe{
+				Recipe: planner.Recipe{
 					Yield: 1,
 					Inputs: inputs(
 						ingredient("minecraft:potato", 1),
@@ -127,13 +128,13 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonRecipeResponse{
+			output: &datafiles.ParseJsonRecipeResponse{
 				Id: "minecraft:red_bed",
-				Recipe: internal.Recipe{
+				Recipe: planner.Recipe{
 					Yield: 1,
 					Inputs: inputs(
 						ingredient("minecraft:red_dye", 1),
-						internal.Ingredient{
+						planner.Ingredient{
 							Options: []string{
 								"minecraft:black_bed",
 								"minecraft:blue_bed",
@@ -180,13 +181,13 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonRecipeResponse{
+			output: &datafiles.ParseJsonRecipeResponse{
 				Id: "minecraft:torch",
-				Recipe: internal.Recipe{
+				Recipe: planner.Recipe{
 					Yield: 4,
 					Inputs: inputs(
 						ingredient("minecraft:stick", 1),
-						internal.Ingredient{
+						planner.Ingredient{
 							Options: []string{
 								"minecraft:coal",
 								"minecraft:charcoal",
@@ -224,11 +225,11 @@ func Test_parseJsonRecipe(t *testing.T) {
 				  }
 				}
 			`,
-			output: &internal.ParseJsonRecipeResponse{
+			output: &datafiles.ParseJsonRecipeResponse{
 				Id: "minecraft:copper_nugget",
-				Recipe: internal.Recipe{
+				Recipe: planner.Recipe{
 					Yield: 1,
-					Inputs: []internal.Ingredient{
+					Inputs: []planner.Ingredient{
 						{
 							Options: []string{
 								"minecraft:copper_pickaxe",
@@ -251,7 +252,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 			},
 		},
 	}
-	lessIngredient := func(a, b internal.Ingredient) bool {
+	lessIngredient := func(a, b planner.Ingredient) bool {
 		if len(a.Options) == 0 || len(b.Options) == 0 {
 			return len(a.Options) < len(b.Options)
 		}
@@ -263,7 +264,7 @@ func Test_parseJsonRecipe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := internal.ParseJsonRecipe([]byte(tt.jsonInput))
+			got, _ := datafiles.ParseJsonRecipe([]byte(tt.jsonInput))
 
 			diff := cmp.Diff(tt.output, got,
 				cmpopts.SortSlices(lessIngredient),
@@ -281,20 +282,20 @@ func TestParseJsonTag(t *testing.T) {
 		name string // description of this test case
 		// Named input parameters for target function.
 		data    []byte
-		want    *internal.ParseJsonTagResponse
+		want    *datafiles.ParseJsonTagResponse
 		wantErr bool
 	}{
 		{
 			name: "parses tag values",
 			data: []byte(`{"values":["minecraft:coal","minecraft:charcoal"]}`),
-			want: &internal.ParseJsonTagResponse{
+			want: &datafiles.ParseJsonTagResponse{
 				Tag: []string{"minecraft:coal", "minecraft:charcoal"},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := internal.ParseJsonTag(tt.data)
+			got, gotErr := datafiles.ParseJsonTag(tt.data)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("ParseJsonTag() failed: %v", gotErr)
@@ -317,11 +318,11 @@ func TestParserPreservesIngredientOrderAndDistinctAlternatives(t *testing.T) {
 		`{"type":"minecraft:crafting_shapeless","ingredients":["z",["coal","charcoal"],["coal","charcoal"],["coal","coke"]],"result":{"id":"item","count":1}}`,
 		`{"type":"minecraft:crafting_shaped","key":{"Z":"z","A":["coal","charcoal"],"B":["coal","coke"]},"pattern":["ZA","AB"],"result":{"id":"item","count":1}}`,
 	} {
-		got, err := internal.ParseJsonRecipe([]byte(data))
+		got, err := datafiles.ParseJsonRecipe([]byte(data))
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := []internal.Ingredient{
+		want := []planner.Ingredient{
 			{Options: []string{"z"}, Count: 1},
 			{Options: []string{"coal", "charcoal"}, Count: 2},
 			{Options: []string{"coal", "coke"}, Count: 1},
@@ -330,4 +331,12 @@ func TestParserPreservesIngredientOrderAndDistinctAlternatives(t *testing.T) {
 			t.Fatalf("ingredient mismatch: %s", diff)
 		}
 	}
+}
+
+func ingredient(item string, count uint) planner.Ingredient {
+	return planner.Ingredient{Options: []string{item}, Count: count}
+}
+
+func inputs(values ...planner.Ingredient) []planner.Ingredient {
+	return values
 }

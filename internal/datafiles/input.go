@@ -1,4 +1,4 @@
-package main
+package datafiles
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func readJSON(path string, value any) error {
 	return nil
 }
 
-func loadQuantities(path string) (map[string]uint, error) {
+func LoadQuantities(path string) (map[string]uint, error) {
 	var quantities map[string]uint
 	if err := readJSON(path, &quantities); err != nil {
 		return nil, err

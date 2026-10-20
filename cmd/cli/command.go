@@ -5,7 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"minecraft-item-helper/internal"
+	"minecraft-item-helper/internal/datafiles"
+	"minecraft-item-helper/internal/planner"
 	"sort"
 )
 
@@ -44,36 +45,36 @@ func run(args []string, output io.Writer) error {
 	items := map[string]uint{*item: *amount}
 	if *requestsPath != "" {
 		var err error
-		items, err = loadQuantities(*requestsPath)
+		items, err = datafiles.LoadQuantities(*requestsPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	config, err := loadSettings(*configPath)
+	config, err := datafiles.LoadSettings(*configPath)
 	if err != nil {
 		return err
 	}
-	recipes, err := loadRecipes(*recipesPath, config.RecipeChoices)
+	recipes, err := datafiles.LoadRecipes(*recipesPath, config.RecipeChoices)
 	if err != nil {
 		return err
 	}
-	tags, err := loadTags(*tagsPath)
+	tags, err := datafiles.LoadTags(*tagsPath)
 	if err != nil {
 		return err
 	}
 
-	var inventory internal.Inventory
+	var inventory planner.Inventory
 	if *inventoryPath != "" {
-		inventory, err = loadQuantities(*inventoryPath)
+		inventory, err = datafiles.LoadQuantities(*inventoryPath)
 		if err != nil {
 			return err
 		}
 	}
-	response, err := internal.PlanBuild(internal.BuildRequest{
+	response, err := planner.PlanBuild(planner.BuildRequest{
 		Items:   items,
 		Recipes: recipes, Tags: tags, Inventory: inventory,
-		StopItems: config.stopItems(), Preferences: config.Preferences,
+		StopItems: config.StopItemSet(), Preferences: config.Preferences,
 	})
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package internal
+package planner
 
 // StopItemsWithOverrides returns the default stop items with additions and removals applied.
 // Removals take precedence when an item appears in both lists.

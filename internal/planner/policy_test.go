@@ -1,8 +1,8 @@
-package internal_test
+package planner_test
 
 import (
 	"errors"
-	"minecraft-item-helper/internal"
+	"minecraft-item-helper/internal/planner"
 	"strings"
 	"testing"
 
@@ -10,33 +10,33 @@ import (
 )
 
 func TestStopItemsConsumeInventoryWithoutExpandingRecipe(t *testing.T) {
-	got, err := internal.ResolveBaseMaterials(internal.Request{
+	got, err := planner.ResolveBaseMaterials(planner.Request{
 		RequestedItem: "leather", RequestedAmount: 3,
-		Recipes: map[string]internal.Recipe{
+		Recipes: map[string]planner.Recipe{
 			"leather": {Yield: 1, Inputs: inputs(ingredient("rabbit_hide", 4))},
 		},
-		Inventory: internal.Inventory{"leather": 1},
+		Inventory: planner.Inventory{"leather": 1},
 		StopItems: map[string]bool{"leather": true},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := internal.Response{FlatMap: map[string]uint{"leather": 2}, Inventory: internal.Inventory{}}
+	want := planner.Response{FlatMap: map[string]uint{"leather": 2}, Inventory: planner.Inventory{}}
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Fatalf("mismatch (-want +got):\n%s", diff)
 	}
 }
 
 func TestRecipeCycleReturnsDependencyPath(t *testing.T) {
-	_, err := internal.ResolveBaseMaterials(internal.Request{
+	_, err := planner.ResolveBaseMaterials(planner.Request{
 		RequestedItem: "ingot", RequestedAmount: 1,
-		Recipes: map[string]internal.Recipe{
+		Recipes: map[string]planner.Recipe{
 			"ingot":  {Yield: 1, Inputs: inputs(ingredient("nugget", 9))},
 			"nugget": {Yield: 9, Inputs: inputs(ingredient("ingot", 1))},
 		},
-		Inventory: internal.Inventory{},
+		Inventory: planner.Inventory{},
 	})
-	if !errors.Is(err, internal.ErrRecipeCycle) || !strings.Contains(err.Error(), "ingot -> nugget -> ingot") {
+	if !errors.Is(err, planner.ErrRecipeCycle) || !strings.Contains(err.Error(), "ingot -> nugget -> ingot") {
 		t.Fatalf("expected cycle with dependency path, got %v", err)
 	}
 }
@@ -45,20 +45,20 @@ func TestIngredientChoiceUsesBuildThenStockThenPreferences(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		build       map[string]uint
-		stock       internal.Inventory
+		stock       planner.Inventory
 		preferences map[string][]string
 		want        string
 	}{
-		{"build wins over stock", map[string]uint{"oak": 1}, internal.Inventory{"birch": 5}, nil, "oak"},
-		{"stock wins over preference", nil, internal.Inventory{"birch": 5}, map[string][]string{"#planks": {"cherry"}}, "birch"},
-		{"preference breaks stock tie", nil, internal.Inventory{"oak": 1, "cherry": 1}, map[string][]string{"#planks": {"cherry"}}, "cherry"},
+		{"build wins over stock", map[string]uint{"oak": 1}, planner.Inventory{"birch": 5}, nil, "oak"},
+		{"stock wins over preference", nil, planner.Inventory{"birch": 5}, map[string][]string{"#planks": {"cherry"}}, "birch"},
+		{"preference breaks stock tie", nil, planner.Inventory{"oak": 1, "cherry": 1}, map[string][]string{"#planks": {"cherry"}}, "cherry"},
 		{"saved preference", nil, nil, map[string][]string{"#planks": {"cherry"}}, "cherry"},
 		{"first option", nil, nil, nil, "oak"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := internal.ResolveBaseMaterials(internal.Request{
+			got, err := planner.ResolveBaseMaterials(planner.Request{
 				RequestedItem: "#planks", RequestedAmount: 10,
-				Tags:      internal.Tags{"#planks": {"oak", "birch", "cherry"}},
+				Tags:      planner.Tags{"#planks": {"oak", "birch", "cherry"}},
 				Inventory: tt.stock, BuildItems: tt.build, Preferences: tt.preferences,
 			})
 			if err != nil {
@@ -73,9 +73,9 @@ func TestIngredientChoiceUsesBuildThenStockThenPreferences(t *testing.T) {
 }
 
 func TestExplicitItemIgnoresMaterialPreferences(t *testing.T) {
-	got, err := internal.ResolveBaseMaterials(internal.Request{
+	got, err := planner.ResolveBaseMaterials(planner.Request{
 		RequestedItem: "oak", RequestedAmount: 1,
-		Tags:        internal.Tags{"#planks": {"oak", "cherry"}},
+		Tags:        planner.Tags{"#planks": {"oak", "cherry"}},
 		Preferences: map[string][]string{"#planks": {"cherry"}},
 	})
 	if err != nil {
@@ -87,11 +87,11 @@ func TestExplicitItemIgnoresMaterialPreferences(t *testing.T) {
 }
 
 func TestNestedTagsResolveAndCyclesFail(t *testing.T) {
-	req := internal.Request{
+	req := planner.Request{
 		RequestedItem: "#logs", RequestedAmount: 1,
-		Tags: internal.Tags{"#logs": {"#oak_logs"}, "#oak_logs": {"oak_log"}},
+		Tags: planner.Tags{"#logs": {"#oak_logs"}, "#oak_logs": {"oak_log"}},
 	}
-	got, err := internal.ResolveBaseMaterials(req)
+	got, err := planner.ResolveBaseMaterials(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,18 +99,18 @@ func TestNestedTagsResolveAndCyclesFail(t *testing.T) {
 		t.Fatal(diff)
 	}
 	req.Tags["#oak_logs"] = []string{"#logs"}
-	if _, err := internal.ResolveBaseMaterials(req); !errors.Is(err, internal.ErrTagCycle) {
+	if _, err := planner.ResolveBaseMaterials(req); !errors.Is(err, planner.ErrTagCycle) {
 		t.Fatalf("expected tag cycle, got %v", err)
 	}
 }
 
 func TestAlternativeIngredientUsesInventory(t *testing.T) {
-	got, err := internal.ResolveBaseMaterials(internal.Request{
+	got, err := planner.ResolveBaseMaterials(planner.Request{
 		RequestedItem: "torch", RequestedAmount: 1,
-		Recipes: map[string]internal.Recipe{
-			"torch": {Yield: 1, Inputs: []internal.Ingredient{{Options: []string{"coal", "charcoal"}, Count: 1}}},
+		Recipes: map[string]planner.Recipe{
+			"torch": {Yield: 1, Inputs: []planner.Ingredient{{Options: []string{"coal", "charcoal"}, Count: 1}}},
 		},
-		Inventory: internal.Inventory{"charcoal": 1},
+		Inventory: planner.Inventory{"charcoal": 1},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -121,12 +121,12 @@ func TestAlternativeIngredientUsesInventory(t *testing.T) {
 }
 
 func TestAlternativeIngredientUsesApplicableTagPreferences(t *testing.T) {
-	got, err := internal.ResolveBaseMaterials(internal.Request{
+	got, err := planner.ResolveBaseMaterials(planner.Request{
 		RequestedItem: "torch", RequestedAmount: 1,
-		Recipes: map[string]internal.Recipe{
-			"torch": {Yield: 1, Inputs: []internal.Ingredient{{Options: []string{"coal", "charcoal"}, Count: 1}}},
+		Recipes: map[string]planner.Recipe{
+			"torch": {Yield: 1, Inputs: []planner.Ingredient{{Options: []string{"coal", "charcoal"}, Count: 1}}},
 		},
-		Tags:        internal.Tags{"#coals": {"coal", "charcoal"}},
+		Tags:        planner.Tags{"#coals": {"coal", "charcoal"}},
 		Preferences: map[string][]string{"#coals": {"charcoal"}},
 	})
 	if err != nil {

@@ -1,7 +1,7 @@
-package internal_test
+package planner_test
 
 import (
-	"minecraft-item-helper/internal"
+	"minecraft-item-helper/internal/planner"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -10,19 +10,19 @@ import (
 func TestResolveBaseMaterials(t *testing.T) {
 	tests := []struct {
 		name   string // description of this test case
-		inputs internal.Request
-		want   internal.Response
+		inputs planner.Request
+		want   planner.Response
 	}{
 		{
 			name: "test raw materials for a direct recipe",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "planks",
 				RequestedAmount: 4,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"planks": {
 						Yield: 4,
-						Inputs: []internal.Ingredient{
-							internal.Ingredient{
+						Inputs: []planner.Ingredient{
+							planner.Ingredient{
 								Options: []string{"log"},
 								Count:   1,
 							},
@@ -30,19 +30,19 @@ func TestResolveBaseMaterials(t *testing.T) {
 					},
 				},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap: map[string]uint{"log": 1},
 			},
 		},
 		{
 			name: "test nested two-step recipe",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "stick",
 				RequestedAmount: 4,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"planks": {
 						Yield: 4,
-						Inputs: []internal.Ingredient{
+						Inputs: []planner.Ingredient{
 							{
 								Options: []string{"log"},
 								Count:   1,
@@ -51,7 +51,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 					},
 					"stick": {
 						Yield: 4,
-						Inputs: []internal.Ingredient{
+						Inputs: []planner.Ingredient{
 							{
 								Options: []string{"planks"},
 								Count:   2,
@@ -60,19 +60,19 @@ func TestResolveBaseMaterials(t *testing.T) {
 					},
 				},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap: map[string]uint{"log": 1},
 			},
 		},
 		{
 			name: "test recipe with varying levels of base materials",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "iron-pickaxe",
 				RequestedAmount: 1,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"iron-pickaxe": {
 						Yield: 1,
-						Inputs: []internal.Ingredient{
+						Inputs: []planner.Ingredient{
 							{
 								Options: []string{"iron-ingot"},
 								Count:   3,
@@ -85,7 +85,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 					},
 					"planks": {
 						Yield: 4,
-						Inputs: []internal.Ingredient{
+						Inputs: []planner.Ingredient{
 							{
 								Options: []string{"log"},
 								Count:   1,
@@ -94,7 +94,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 					},
 					"stick": {
 						Yield: 4,
-						Inputs: []internal.Ingredient{
+						Inputs: []planner.Ingredient{
 							{
 								Options: []string{"planks"},
 								Count:   2,
@@ -102,7 +102,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 						},
 					}},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap: map[string]uint{
 					"iron-ingot": 3,
 					"log":        1,
@@ -111,13 +111,13 @@ func TestResolveBaseMaterials(t *testing.T) {
 		},
 		{
 			name: "test multiplying by yield amount",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "planks",
 				RequestedAmount: 8,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"planks": {
 						Yield: 4,
-						Inputs: []internal.Ingredient{
+						Inputs: []planner.Ingredient{
 							{
 								Options: []string{"log"},
 								Count:   1,
@@ -125,14 +125,14 @@ func TestResolveBaseMaterials(t *testing.T) {
 						},
 					}},
 			},
-			want: internal.Response{FlatMap: map[string]uint{"log": 2}},
+			want: planner.Response{FlatMap: map[string]uint{"log": 2}},
 		},
 		{
 			name: "test multiplier on varying levels of base materials",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "iron-pickaxe",
 				RequestedAmount: 3,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"iron-pickaxe": {
 						Yield: 1,
 						Inputs: inputs(
@@ -153,17 +153,17 @@ func TestResolveBaseMaterials(t *testing.T) {
 						),
 					}},
 			},
-			want: internal.Response{FlatMap: map[string]uint{
+			want: planner.Response{FlatMap: map[string]uint{
 				"iron-ingot": 9,
 				"log":        1,
 			}},
 		},
 		{
 			name: "test adding extra items to inventory",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "stick",
 				RequestedAmount: 3,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"stick": {
 						Yield: 4,
 						Inputs: inputs(
@@ -179,7 +179,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 				},
 				Inventory: map[string]uint{},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap: map[string]uint{
 					"log": 1,
 				},
@@ -191,10 +191,10 @@ func TestResolveBaseMaterials(t *testing.T) {
 		},
 		{
 			name: "test having items in inventory",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "stick",
 				RequestedAmount: 5,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"stick": {
 						Yield: 4,
 						Inputs: inputs(
@@ -212,7 +212,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 					"stick": 1,
 				},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap: map[string]uint{
 					"log": 1,
 				},
@@ -223,10 +223,10 @@ func TestResolveBaseMaterials(t *testing.T) {
 		},
 		{
 			name: "test having exact items in inventory",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "stick",
 				RequestedAmount: 4,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"stick": {
 						Yield: 4,
 						Inputs: inputs(
@@ -244,17 +244,17 @@ func TestResolveBaseMaterials(t *testing.T) {
 					"stick": 4,
 				},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap:   map[string]uint{},
 				Inventory: map[string]uint{},
 			},
 		},
 		{
 			name: "test resolving recipe requiring a tag using first candidate",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "stick",
 				RequestedAmount: 4,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"stick": {
 						Yield: 4,
 						Inputs: inputs(
@@ -268,12 +268,12 @@ func TestResolveBaseMaterials(t *testing.T) {
 						),
 					},
 				},
-				Tags: internal.Tags{
+				Tags: planner.Tags{
 					"#planks": []string{"oak-planks", "birch-planks"},
 				},
-				Inventory: internal.Inventory{},
+				Inventory: planner.Inventory{},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap: map[string]uint{
 					"oak-log": 1,
 				},
@@ -284,10 +284,10 @@ func TestResolveBaseMaterials(t *testing.T) {
 		},
 		{
 			name: "test resolving recipe requiring a tag preferring existing inventory",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "stick",
 				RequestedAmount: 4,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"stick": {
 						Yield: 4,
 						Inputs: inputs(
@@ -307,24 +307,24 @@ func TestResolveBaseMaterials(t *testing.T) {
 						),
 					},
 				},
-				Tags: internal.Tags{
+				Tags: planner.Tags{
 					"#planks": []string{"oak-planks", "birch-planks"},
 				},
 				Inventory: map[string]uint{
 					"birch-planks": 2, // Already have birch, should pick birch instead of oak
 				},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap:   map[string]uint{}, // No logs needed, birch was already available
 				Inventory: map[string]uint{}, // 2 birch consumed completely
 			},
 		},
 		{
 			name: "test resolving recipe requiring a tag preferring existing inventory",
-			inputs: internal.Request{
+			inputs: planner.Request{
 				RequestedItem:   "stick",
 				RequestedAmount: 4,
-				Recipes: map[string]internal.Recipe{
+				Recipes: map[string]planner.Recipe{
 					"stick": {
 						Yield: 4,
 						// Inputs: map[string]uint{"#planks": 2},
@@ -345,14 +345,14 @@ func TestResolveBaseMaterials(t *testing.T) {
 						),
 					},
 				},
-				Tags: internal.Tags{
+				Tags: planner.Tags{
 					"#planks": []string{"oak-planks", "birch-planks"},
 				},
 				Inventory: map[string]uint{
 					"birch-planks": 2, // Already have birch, should pick birch instead of oak
 				},
 			},
-			want: internal.Response{
+			want: planner.Response{
 				FlatMap:   map[string]uint{}, // No logs needed, birch was already available
 				Inventory: map[string]uint{}, // 2 birch consumed completely
 			},
@@ -360,7 +360,7 @@ func TestResolveBaseMaterials(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := internal.ResolveBaseMaterials(tt.inputs)
+			got, err := planner.ResolveBaseMaterials(tt.inputs)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -372,12 +372,12 @@ func TestResolveBaseMaterials(t *testing.T) {
 	}
 }
 
-func inputs(ingredient ...internal.Ingredient) []internal.Ingredient {
+func inputs(ingredient ...planner.Ingredient) []planner.Ingredient {
 	return ingredient
 }
 
-func ingredient(id string, count uint) internal.Ingredient {
-	return internal.Ingredient{
+func ingredient(id string, count uint) planner.Ingredient {
+	return planner.Ingredient{
 		Options: []string{id},
 		Count:   count,
 	}

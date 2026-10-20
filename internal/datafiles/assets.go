@@ -1,16 +1,16 @@
-package main
+package datafiles
 
 import (
 	"errors"
 	"fmt"
-	"minecraft-item-helper/internal"
+	"minecraft-item-helper/internal/planner"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 )
 
-func loadRecipes(dir string, choices map[string]string) (map[string]internal.Recipe, error) {
+func LoadRecipes(dir string, choices map[string]string) (map[string]planner.Recipe, error) {
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read recipes directory %q: %w", dir, err)
@@ -18,7 +18,7 @@ func loadRecipes(dir string, choices map[string]string) (map[string]internal.Rec
 
 	type candidate struct {
 		name   string
-		recipe internal.Recipe
+		recipe planner.Recipe
 	}
 	candidates := make(map[string][]candidate)
 	for _, file := range files {
@@ -30,8 +30,8 @@ func loadRecipes(dir string, choices map[string]string) (map[string]internal.Rec
 		if err != nil {
 			return nil, fmt.Errorf("read recipe %q: %w", path, err)
 		}
-		parsed, err := internal.ParseJsonRecipe(data)
-		if errors.Is(err, internal.ErrUnsupportedRecipeType) {
+		parsed, err := ParseJsonRecipe(data)
+		if errors.Is(err, ErrUnsupportedRecipeType) {
 			continue
 		}
 		if err != nil {
@@ -45,7 +45,7 @@ func loadRecipes(dir string, choices map[string]string) (map[string]internal.Rec
 			return nil, fmt.Errorf("recipe choice %q for %s is not a supported recipe in %q", name, item, dir)
 		}
 	}
-	recipes := make(map[string]internal.Recipe)
+	recipes := make(map[string]planner.Recipe)
 	for item, options := range candidates {
 		selected := options[0]
 		wanted := choices[item]
@@ -63,8 +63,8 @@ func loadRecipes(dir string, choices map[string]string) (map[string]internal.Rec
 	return recipes, nil
 }
 
-func loadTags(dir string) (internal.Tags, error) {
-	tags := make(internal.Tags)
+func LoadTags(dir string) (planner.Tags, error) {
+	tags := make(planner.Tags)
 	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -77,7 +77,7 @@ func loadTags(dir string) (internal.Tags, error) {
 		if err != nil {
 			return fmt.Errorf("read tag %q: %w", path, err)
 		}
-		parsed, err := internal.ParseJsonTag(data)
+		parsed, err := ParseJsonTag(data)
 		if err != nil {
 			return fmt.Errorf("parse tag %q: %w", path, err)
 		}

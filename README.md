@@ -93,7 +93,7 @@ Planning is deterministic and greedy. Each ingredient group chooses one alternat
 
 ## Development
 
-Domain parsing and planning live in `internal/`; CLI arguments, file loading, and output live in `cmd/cli/`. Tests exercise the CLI through `run(args, output)` without launching subprocesses.
+Start with `internal/planner/` for material-planning rules and `internal/datafiles/` for reading recipe, tag, settings, and inventory files. `cmd/cli/` handles command-line flags and printed output. Tests sit beside the code they cover; CLI behavior is tested through `run(args, output)` without launching subprocesses.
 
 ```sh
 just test

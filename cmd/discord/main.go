@@ -24,6 +24,8 @@ type runtime struct {
 
 func intPointer(v int) *int { return &v }
 
+func isPlanCommandPath(path string) bool { return path == "/plan" }
+
 func env(name, fallback string) string {
 	if v := os.Getenv(name); v != "" {
 		return v
@@ -90,9 +92,10 @@ func main() {
 	}
 	listener := func(e *events.ApplicationCommandInteractionCreate) {
 		data := e.SlashCommandInteractionData()
-		if data.CommandPath() != "plan" {
+		if !isPlanCommandPath(data.CommandPath()) {
 			return
 		}
+		log.Printf("received /plan interaction")
 		sender := &discordSender{event: e}
 		if err := rt.service.handle(data.String("item"), int64(data.Int("quantity")), e.User().ID.String(), sender); err != nil {
 			log.Printf("failed to respond to planning interaction: %v", err)
@@ -141,6 +144,7 @@ func main() {
 	if _, e = client.Rest.SetGlobalCommands(client.ApplicationID, []discord.ApplicationCommandCreate{command}); e != nil {
 		log.Fatalf("register /plan: %v", e)
 	}
+	log.Printf("registered global Discord command /plan")
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
@@ -153,6 +157,7 @@ func main() {
 	if e = client.OpenGateway(context.Background()); e != nil {
 		log.Fatalf("open Discord gateway: %v", e)
 	}
+	log.Printf("Discord Gateway connected")
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop

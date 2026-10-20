@@ -83,6 +83,12 @@ This reports nine raw iron. Stopping at ingots does not convert owned blocks or 
 
 Tag IDs come from relative filenames: `coals.json` provides `#minecraft:coals`.
 
+## Discord bot
+
+The optional Discord adapter registers /plan with an item suggestion field and a positive quantity. Planning results and errors are sent ephemerally. Long results use private Previous/Next controls that are bound to the requester and expire after 15 minutes. Suggestions use only configured recipe and tag files; labels are derived from item IDs and each submitted value is checked again by the planner.
+
+Create a Discord application and bot, install it in the target server with bot and applications.commands scopes, then run go run ./cmd/discord from the repository root. Set DISCORD_BOT_TOKEN to the bot token; keep it in the runtime environment, never in the repository. The bot loads the same runtime data as the CLI. Optional paths are MINECRAFT_ITEM_HELPER_RECIPES (default assets/recipes), MINECRAFT_ITEM_HELPER_TAGS (default assets/item-tag-groups), and MINECRAFT_ITEM_HELPER_CONFIG (optional settings JSON). The bot does not log Discord identities, command contents, or interaction payloads. To restrict page controls to the requester, long-result pages and that requester's Discord ID stay in process memory for up to 15 minutes and are never written to disk. The bot does not upload files or make web requests.
+
 ## MVP limits
 
 Shaped crafting, shapeless crafting, and smelting are supported; other recipe types are skipped. Items without a supported recipe become shopping materials. Smelting fuel is not included.
@@ -93,7 +99,7 @@ Planning is deterministic and greedy. Each ingredient group chooses one alternat
 
 ## Development
 
-Start with `internal/planner/` for material-planning rules and `internal/datafiles/` for reading recipe, tag, settings, and inventory files. `cmd/cli/` handles command-line flags and printed output. Tests sit beside the code they cover; CLI behavior is tested through `run(args, output)` without launching subprocesses.
+Start with `internal/planner/` for material-planning rules and `internal/datafiles/` for reading recipe, tag, settings, and inventory files. `cmd/cli/` handles command-line flags and printed output. `cmd/discord/` handles Discord commands, suggestions, private replies, and temporary pagination. Tests sit beside the code they cover; CLI behavior is tested through `run(args, output)` without launching subprocesses.
 
 ```sh
 just test

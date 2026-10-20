@@ -26,8 +26,8 @@ func (s planService) handle(item string, amount int64, owner string, sender plan
 	if err := sender.DeferPrivate(); err != nil {
 		return err
 	}
-	if amount <= 0 || strings.TrimSpace(item) == "" || strings.HasPrefix(item, "#") {
-		return sender.SendPrivate("Enter a concrete item ID and a quantity greater than zero.", 0, 0)
+	if amount <= 0 {
+		return sender.SendPrivate("Enter a quantity greater than zero.", 0, 0)
 	}
 	response, err := planner.PlanBuild(planner.BuildRequest{Items: map[string]uint{item: uint(amount)}, Recipes: s.recipes, Tags: s.tags, StopItems: s.settings.StopItemSet(), Preferences: s.settings.Preferences})
 	if err != nil {

@@ -27,12 +27,13 @@ func TestPlanUsesPrivateSenderAndRejectsBadInputs(t *testing.T) {
 	for _, tc := range []struct {
 		item     string
 		quantity int64
-	}{{"#minecraft:logs", 2}, {"minecraft:oak_log", 0}} {
+		message  string
+	}{{"#minecraft:logs", 2, "concrete item"}, {"minecraft:oak_log", 0, "quantity greater than zero"}} {
 		c := &capturedPlan{}
 		if err := svc.handle(tc.item, tc.quantity, "user", c); err != nil {
 			t.Fatal(err)
 		}
-		if c.deferred != 1 || len(c.messages) != 1 || !strings.Contains(c.messages[0], "concrete item") {
+		if c.deferred != 1 || len(c.messages) != 1 || !strings.Contains(c.messages[0], tc.message) {
 			t.Fatalf("unexpected private response: %#v", c)
 		}
 	}
